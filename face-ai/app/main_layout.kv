@@ -1,0 +1,113 @@
+# main_layout.kv
+## import local components
+#:import FaceMatchBox screens.face_match.FaceMatchBox
+#:import SettingsBox screens.setting.SettingsBox
+#:import InitBox screens.init_screen.InitBox
+#:import SecurityBox screens.security.SecurityBox
+
+<DrawerClickableItem@MDNavigationDrawerItem>
+    focus_color: "#e7e4c0"
+    text_color: "#4a4939"
+    icon_color: "#4a4939"
+    ripple_color: "#c5bdd2"
+    selected_color: "#0c6c4d"
+
+<DrawerLabelItem@MDNavigationDrawerItem>
+    text_color: "#4a4939"
+    icon_color: "#4a4939"
+    focus_behavior: False
+    selected_color: "#4a4939"
+    _no_ripple_effect: True
+
+<ContentNavigationDrawer>
+
+    MDNavigationDrawerHeader:
+        title: "App Menu"
+        title_color: "#4a4939"
+        spacing: "4dp"
+        padding: "12dp", 0, 0, "56dp"
+
+    MDNavigationDrawerLabel:
+        text: "Go To"
+
+    DrawerClickableItem:
+        icon: "download"
+        text: "Initialize"
+        on_press:
+            root.nav_drawer.set_state("close")
+            root.screen_manager.current = "initScreen"
+
+    DrawerClickableItem:
+        icon: "tag-faces"
+        text: "Face Finder"
+        on_press:
+            root.nav_drawer.set_state("close")
+            root.screen_manager.current = "faceFindScr"
+
+    DrawerClickableItem:
+        icon: "security"
+        text: "Secure Vault"
+        on_press:
+            root.nav_drawer.set_state("close")
+            root.screen_manager.current = "securityScr"
+
+    DrawerClickableItem:
+        icon: "wrench"
+        text: "Settings & Help"
+        on_press:
+            root.nav_drawer.set_state("close")
+            root.screen_manager.current = "settingsScr"
+
+## Main screen
+MDScreen:
+
+    MainScreenBox: # main container
+        orientation: 'vertical'
+        spacing: dp(4)
+        padding: 0, self.top_pad, 0, 0 # self.bottom_pad
+
+        MDTopAppBar:
+            pos_hint: {"top": 1}
+            elevation: 2
+            title: "Face AI"
+            left_action_items: [["menu", lambda x: nav_drawer.set_state("open")]]
+            md_bg_color: '#874bd1'
+
+        MDNavigationLayout:
+
+            MDScreenManager:
+                id: screen_manager
+
+                MDScreen:
+                    name: "initScreen"
+                    InitBox:
+                        id: init_screen
+
+                MDScreen:
+                    name: "faceFindScr"
+                    on_enter: app.on_face_matcher_entry()
+                    #on_leave: app.release_wakelock()
+                    FaceMatchBox:
+                        id: face_match_scr
+
+                MDScreen:
+                    name: "securityScr"
+                    on_enter: app.on_security_enter()
+                    on_leave: app.on_security_leave()
+                    SecurityBox:
+                        id: security_box
+
+                MDScreen:
+                    name: "settingsScr"
+                    SettingsBox:
+                        id: settings_box
+
+            MDNavigationDrawer:
+                id: nav_drawer
+                radius: (0, 16, 16, 0)
+
+                ContentNavigationDrawer:
+                    screen_manager: screen_manager
+                    nav_drawer: nav_drawer
+
+# End

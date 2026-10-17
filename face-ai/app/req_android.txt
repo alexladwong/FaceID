@@ -1,0 +1,3 @@
+# for only building apk/aab
+Cython==0.29.37
+https://github.com/daslearning-org/buildozer-unofficial/archive/develop.zip
