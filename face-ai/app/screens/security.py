@@ -1,163 +1,350 @@
 from kivy.lang import Builder
 from kivy.metrics import dp, sp
+from kivy.properties import NumericProperty, StringProperty
+from kivy.utils import platform
 
 from kivymd.uix.boxlayout import MDBoxLayout
-from kivymd.uix.gridlayout import MDGridLayout
-from kivymd.uix.scrollview import MDScrollView
-from kivymd.uix.button import MDFillRoundFlatIconButton
-from kivymd.uix.list import MDList, OneLineIconListItem, IconLeftWidget, IconRightWidget, OneLineAvatarIconListItem
+from kivymd.uix.list import TwoLineAvatarIconListItem
 
-from kivy.properties import StringProperty, NumericProperty, ObjectProperty
-from kivy.metrics import dp, sp
-from kivy.utils import platform
-from kivy.uix.widget import Widget
+# Local imports (their kv rules are registered here as well).
+from screens.ui import (  # noqa: F401
+    AppCard,
+    BusyState,
+    EmptyState,
+    IconBadge,
+    InfoBanner,
+    StatusPill,
+)
 
 
-## The .kv strings
 Builder.load_string('''
+#:import tokens screens.tokens
 #:import parse_color kivy.parser.parse_color
+#:import AppCard screens.ui.AppCard
+#:import BusyState screens.ui.BusyState
+#:import EmptyState screens.ui.EmptyState
+#:import IconBadge screens.ui.IconBadge
+#:import InfoBanner screens.ui.InfoBanner
+#:import StatusPill screens.ui.StatusPill
 
-<SecSingleFile>:
-    id: root.filename
-    text: root.filename
-    on_release: app.download_sec_file(self)
-    IconLeftWidget:
-        icon: "delete"
-        on_release: app.popup_sec_file_delete(root)
-    IconRightWidget:
-        icon: "download"
-        on_release: app.download_sec_file(root)
 
-<SecAfterLogin>:
-    orientation: 'vertical'
-    spacing: dp(4)
-
-    MDGridLayout:
-        cols: 3
-        spacing: dp(4)
-        adaptive_height: True
-        MDFillRoundFlatIconButton:
-            id: vault_up_btn
-            text: "Upload"
-            icon: "folder-key"
-            font_size: sp(18)
-            #md_bg_color: "#333036"
-            pos_hint: {"center_x": .5, "center_y": 1}
-            size_hint_x: 0.5
-            on_release: app.upload_to_vault()
-        MDFillRoundFlatIconButton:
-            id: add_new_face_btn
-            text: "Refresh"
-            icon: "refresh"
-            font_size: sp(18)
-            #md_bg_color: "#333036"
-            pos_hint: {"center_x": .5, "center_y": 1}
-            size_hint_x: 0.5
-            on_release: app.refresh_sec_file_list()
-        MDFillRoundFlatIconButton:
-            id: add_new_face_btn
-            text: "Add Face"
-            icon: "face-recognition"
-            font_size: sp(18)
-            md_bg_color: "#333036"
-            pos_hint: {"center_x": .5, "center_y": 1}
-            size_hint_x: 0.5
-            on_release: app.add_new_face()
-
-    MDScrollView:
-        size_hint_y: 0.8
-        canvas.before:
-            Color:
-                rgb: parse_color('#f7e8c6')
-            RoundedRectangle:
-                size: self.width, self.height
-                pos: self.pos
-        MDList:
-            id: sec_file_list
-            # add all files here
-
-<NameInput>:
-    orientation: 'vertical'
-    spacing: dp(4)
-    MDGridLayout:
-        cols: 2
-        padding: 4, 4, 4, 32
-        adaptive_height: True
-        MDLabel:
-            text: "Enter your name"
-            halign: "left"
-            font_size: sp(14)
-            size_hint_x: 0.4
-        MDTextField:
-            id: sec_name_inp_txt
-            text: ""
-            hint_text: "Enter Name"
-            mode: "rectangle"
-            helper_text: "ex: Somnath Das"
-            helper_text_mode: "persistent"
-            size_hint_x: 0.6
-            font_size: sp(18)
-            multiline: False
-    MDFillRoundFlatIconButton:
-        id: sec_cam_btn
-        text: root.btn_txt
-        icon: "camera"
-        font_size: sp(18)
-        md_bg_color: "#333036"
-        pos_hint: {"center_x": .5, "center_y": 1}
-        size_hint_x: 0.5
-        on_release: app.sec_capture_frame(sec_name_inp_txt, True)
-    Widget:
-        size_hint_y: 0.5
-
-<SecCamBtn>:
-    id: sec_cam_btn
-    text: root.btn_txt
-    icon: "camera"
-    font_size: sp(18)
-    md_bg_color: "#333036"
-    pos_hint: {"center_x": .5, "center_y": 1}
-    size_hint_x: 0.5
-    on_release: app.sec_capture_frame(None, False)
-
-<SecCamBox>:
-    id: camera_box
-    size_hint_y: 0.4
-    # add camera feed here
-
-# main box
 <SecurityBox>:
-    orientation: 'vertical'
-    padding: 4, 0, 4, self.bottom_pad # left, top, right, bottom
-    spacing: dp(4)
+    orientation: "vertical"
+    padding: 0, 0, 0, self.bottom_pad
 
     MDBoxLayout:
         id: sec_elements_box
-        orientation: 'vertical'
-        spacing: dp(4)
-        size_hint_y: 0.8
+        orientation: "vertical"
+        padding: dp(16), dp(12), dp(16), dp(12)
+        spacing: dp(12)
 
-        # Dynamic things will be added here
 
+<SecSingleFile>:
+    text: root.filename
+    secondary_text: "Encrypted - tap to download"
+    on_release: app.download_sec_file(root)
+    IconLeftWidget:
+        icon: "delete-outline"
+        on_release: app.popup_sec_file_delete(root)
+    IconRightWidget:
+        icon: "download-outline"
+        on_release: app.download_sec_file(root)
+
+
+<LoadingCard>:
+    orientation: "vertical"
+    size_hint_y: None
+    height: dp(150)
+    BusyState:
+        text: root.text
+        detail: root.detail
+
+
+<CameraCard>:
+    orientation: "vertical"
+    size_hint_y: None
+    height: dp(368)
+    padding: dp(14)
+    spacing: dp(8)
+    MDBoxLayout:
+        size_hint_y: None
+        height: dp(24)
+        spacing: dp(8)
+        MDIcon:
+            icon: "camera-outline"
+            theme_text_color: "Custom"
+            text_color: tokens.PRIMARY
+            font_size: sp(15)
+            size_hint: None, None
+            size: dp(18), dp(18)
+            pos_hint: {"center_y": .5}
+        MDLabel:
+            text: "Live camera"
+            font_size: sp(12)
+            bold: True
+            theme_text_color: "Custom"
+            text_color: tokens.TEXT
+            valign: "middle"
+            size_hint_y: None
+            height: dp(24)
+            text_size: self.width, None
+        Widget:
+        MDLabel:
+            id: cam_status
+            text: root.status
+            font_size: sp(9)
+            halign: "right"
+            valign: "middle"
+            size_hint_y: None
+            height: dp(24)
+            text_size: self.width, None
+            theme_text_color: "Custom"
+            text_color: tokens.MUTED
+    MDBoxLayout:
+        size_hint_y: None
+        height: dp(280)
+        Widget:
+        MDBoxLayout:
+            id: cam_holder
+            size_hint: None, 1
+            width: min(root.width - dp(64), dp(280) * root.preview_ratio)
+            padding: dp(6)
+            canvas.before:
+                Color:
+                    rgba: parse_color("#000000")
+                RoundedRectangle:
+                    pos: self.pos
+                    size: self.size
+                    radius: [dp(14)]
+        Widget:
+    MDLabel:
+        text: "If the preview stays black, allow camera access in System Settings -> Privacy -> Camera."
+        font_size: sp(9)
+        theme_text_color: "Custom"
+        text_color: tokens.MUTED
+        size_hint_y: None
+        height: dp(16) if app.is_desktop else 0
+        opacity: 1 if app.is_desktop else 0
+        text_size: self.width, None
+
+
+<RegisterCard>:
+    orientation: "vertical"
+    size_hint_y: None
+    height: self.minimum_height
+    padding: dp(16)
+    spacing: dp(10)
+    MDBoxLayout:
+        size_hint_y: None
+        height: dp(40)
+        spacing: dp(12)
+        IconBadge:
+            icon: "face-recognition"
+            bg: tokens.PRIMARY_SOFT
+            fg: tokens.PRIMARY
+            size: dp(40), dp(40)
+            pos_hint: {"center_y": .5}
+        MDBoxLayout:
+            orientation: "vertical"
+            size_hint_y: None
+            height: dp(36)
+            spacing: dp(1)
+            pos_hint: {"center_y": .5}
+            MDLabel:
+                text: "Register your face"
+                font_size: sp(14)
+                bold: True
+                adaptive_height: True
+                theme_text_color: "Custom"
+                text_color: tokens.TEXT
+            MDLabel:
+                text: "No face is enrolled yet. Save one to lock the vault."
+                font_size: sp(10)
+                adaptive_height: True
+                theme_text_color: "Custom"
+                text_color: tokens.MUTED
+    MDTextField:
+        id: sec_name_inp_txt
+        hint_text: "Your name"
+        mode: "rectangle"
+        multiline: False
+        font_size: sp(13)
+        size_hint_y: None
+        height: dp(58)
+        helper_text: "At least 3 characters"
+        helper_text_mode: "on_focus"
+    MDFillRoundFlatIconButton:
+        id: sec_capture_btn
+        text: "Saving..." if app.verifying else "Save my face"
+        icon: "camera-outline"
+        font_size: sp(12)
+        size_hint_y: None
+        height: dp(42)
+        disabled: app.verifying
+        on_release: app.sec_capture_frame(sec_name_inp_txt, True)
+
+
+<LoginCard>:
+    orientation: "vertical"
+    size_hint_y: None
+    height: self.minimum_height
+    padding: dp(16)
+    spacing: dp(10)
+    MDBoxLayout:
+        size_hint_y: None
+        height: dp(40)
+        spacing: dp(12)
+        IconBadge:
+            icon: "shield-lock-outline"
+            bg: tokens.SUCCESS_SOFT
+            fg: tokens.SUCCESS
+            size: dp(40), dp(40)
+            pos_hint: {"center_y": .5}
+        MDBoxLayout:
+            orientation: "vertical"
+            size_hint_y: None
+            height: dp(36)
+            spacing: dp(1)
+            pos_hint: {"center_y": .5}
+            MDLabel:
+                text: "Vault is locked"
+                font_size: sp(14)
+                bold: True
+                adaptive_height: True
+                theme_text_color: "Custom"
+                text_color: tokens.TEXT
+            MDLabel:
+                text: "Look at the camera and unlock with your face."
+                font_size: sp(10)
+                adaptive_height: True
+                theme_text_color: "Custom"
+                text_color: tokens.MUTED
+    MDFillRoundFlatIconButton:
+        id: sec_login_btn
+        text: "Checking..." if app.verifying else "Unlock with face"
+        icon: "face-recognition"
+        font_size: sp(12)
+        size_hint_y: None
+        height: dp(44)
+        disabled: app.verifying
+        on_release: app.sec_capture_frame(None, False)
+
+
+<SecAfterLogin>:
+    orientation: "vertical"
+    spacing: dp(10)
+
+    MDBoxLayout:
+        size_hint_y: None
+        height: dp(28)
+        spacing: dp(8)
+        MDIcon:
+            icon: "shield-check"
+            theme_text_color: "Custom"
+            text_color: tokens.SUCCESS
+            font_size: sp(20)
+            size_hint: None, None
+            size: dp(24), dp(24)
+            pos_hint: {"center_y": .5}
+        MDLabel:
+            text: "Your vault"
+            font_size: sp(18)
+            bold: True
+            valign: "middle"
+            size_hint_y: None
+            height: dp(28)
+            text_size: self.width, None
+            theme_text_color: "Custom"
+            text_color: tokens.TEXT
+        Widget:
+        MDIconButton:
+            icon: "lock-outline"
+            theme_icon_color: "Custom"
+            icon_color: tokens.MUTED
+            pos_hint: {"center_y": .5}
+            on_release: app.lock_vault()
+        StatusPill:
+            text: "Encrypted"
+            icon: "lock-outline"
+            bg: tokens.SUCCESS_SOFT
+            fg: tokens.SUCCESS
+            pos_hint: {"center_y": .5}
+
+    InfoBanner:
+        id: vault_tip
+        text: "Files are encrypted before they are stored. Download them with your face unlocked."
+        opacity: 1 if app.vault_tip_visible else 0
+        height: self.minimum_height if app.vault_tip_visible else 0
+        disabled: not app.vault_tip_visible
+        close_callback: app.dismiss_vault_tip
+
+    MDBoxLayout:
+        size_hint_y: None
+        height: dp(40)
+        spacing: dp(8)
+
+        MDFillRoundFlatIconButton:
+            text: "Upload"
+            icon: "folder-key-outline"
+            font_size: sp(11)
+            size_hint: None, None
+            size: dp(108), dp(38)
+            on_release: app.upload_to_vault()
+
+        MDFillRoundFlatIconButton:
+            text: "Refresh"
+            icon: "refresh"
+            font_size: sp(11)
+            size_hint: None, None
+            size: dp(100), dp(38)
+            md_bg_color: tokens.PRIMARY_SOFT
+            theme_text_color: "Custom"
+            text_color: tokens.PRIMARY
+            theme_icon_color: "Custom"
+            icon_color: tokens.PRIMARY
+            on_release: app.refresh_sec_file_list()
+
+        MDFillRoundFlatIconButton:
+            text: "Add face"
+            icon: "face-recognition"
+            font_size: sp(11)
+            size_hint: None, None
+            size: dp(108), dp(38)
+            md_bg_color: "#F1F3F9"
+            theme_text_color: "Custom"
+            text_color: tokens.TEXT
+            theme_icon_color: "Custom"
+            icon_color: tokens.TEXT
+            on_release: app.add_new_face()
+
+        Widget:
+
+    MDCard:
+        orientation: "vertical"
+        size_hint_y: 1
+        radius: [dp(16)]
+        elevation: 0
+        padding: dp(6)
+        md_bg_color: "#FBFCFE"
+        border_color: tokens.LINE
+
+        MDScrollView:
+            id: sec_file_scroll
+            do_scroll_x: False
+            MDList:
+                id: sec_file_list
+
+        EmptyState:
+            id: sec_empty
+            icon: "folder-lock-outline"
+            text: "No files yet"
+            detail: "Upload a file to keep it encrypted on this device."
 ''')
 
-# the classes
-class SecSingleFile(OneLineAvatarIconListItem):
-    filename = StringProperty("")
-
-class SecAfterLogin(MDBoxLayout):
-    pass
-
-class SecCamBox(MDBoxLayout):
-    pass
-
-class SecCamBtn(MDFillRoundFlatIconButton):
-    btn_txt = StringProperty("Login")
-
-class NameInput(MDBoxLayout):
-    btn_txt = StringProperty("Save Face")
 
 class SecurityBox(MDBoxLayout):
+    """Secure vault: enrollment/login via camera, then an encrypted file list."""
+
     top_pad = NumericProperty(0)
     bottom_pad = NumericProperty(0)
 
@@ -167,9 +354,77 @@ class SecurityBox(MDBoxLayout):
         if platform == "android":
             try:
                 from android.display_cutout import get_height_of_bar
-                self.top_pad = int(get_height_of_bar('status'))
-                self.bottom_pad = int(get_height_of_bar('navigation'))
+
+                self.top_pad = int(get_height_of_bar("status"))
+                self.bottom_pad = int(get_height_of_bar("navigation"))
             except Exception as e:
                 print(f"Failed android 15 padding: {e}")
                 self.top_pad = 32
                 self.bottom_pad = 48
+
+
+class SecSingleFile(TwoLineAvatarIconListItem):
+    filename = StringProperty("")
+
+
+class SecAfterLogin(MDBoxLayout):
+    pass
+
+
+class CameraCard(AppCard):
+    status = StringProperty("Starting camera...")
+    preview_ratio = NumericProperty(4 / 3)
+
+    def show_error(self, message):
+        self.status = "Unavailable"
+        holder = self.ids.cam_holder
+        holder.clear_widgets()
+        holder.add_widget(
+            MDBoxLayout(
+                orientation="vertical",
+                padding=dp(18),
+                spacing=dp(8),
+                pos_hint={"center_x": .5, "center_y": .5},
+                size_hint=(1, 1),
+            )
+        )
+        box = holder.children[0]
+        from kivymd.uix.label import MDIcon, MDLabel
+
+        box.add_widget(
+            MDIcon(
+                icon="camera-off-outline",
+                theme_text_color="Custom",
+                text_color="#94A3B8",
+                font_size=sp(34),
+                size_hint_y=None,
+                height=dp(40),
+                pos_hint={"center_x": .5},
+            )
+        )
+        box.add_widget(
+            MDLabel(
+                text=message,
+                halign="center",
+                font_size=sp(10),
+                theme_text_color="Custom",
+                text_color="#94A3B8",
+                size_hint_y=None,
+                height=dp(30),
+                text_size=(dp(220), None),
+                pos_hint={"center_x": .5},
+            )
+        )
+
+
+class RegisterCard(AppCard):
+    pass
+
+
+class LoginCard(AppCard):
+    pass
+
+
+class LoadingCard(AppCard):
+    text = StringProperty("")
+    detail = StringProperty("")

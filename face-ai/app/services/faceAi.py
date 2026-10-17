@@ -167,6 +167,13 @@ class FaceAiSvc:
         image1 = cv2.imread(img1_path)
         image2 = cv2.imread(img2_path)
 
+        if image1 is None or image2 is None:
+            obj_return["msg"] = "One of the selected images could not be read."
+            if callback:
+                Clock.schedule_once(lambda dt: callback(obj_return))
+                return
+            return obj_return
+
         faces1, point1 = self.face_detect.detect(image1)
         if len(faces1) == 1:
             img1_stat = True

@@ -5,3 +5,5 @@ numpy
 onnxruntime
 plyer
 cryptography
+requests
+pyobjus; sys_platform == "darwin"

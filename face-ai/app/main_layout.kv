@@ -1,97 +1,191 @@
 # main_layout.kv
 ## import local components
+#:import tokens screens.tokens
+#:import sm kivy.uix.screenmanager
 #:import FaceMatchBox screens.face_match.FaceMatchBox
 #:import SettingsBox screens.setting.SettingsBox
 #:import InitBox screens.init_screen.InitBox
 #:import SecurityBox screens.security.SecurityBox
 
 <DrawerClickableItem@MDNavigationDrawerItem>
-    focus_color: "#e7e4c0"
-    text_color: "#4a4939"
-    icon_color: "#4a4939"
-    ripple_color: "#c5bdd2"
-    selected_color: "#0c6c4d"
+    radius: [dp(12), 0, 0, dp(12)]
+    focus_color: 0.31, 0.27, 0.9, 0.10
+    ripple_color: 0.31, 0.27, 0.9, 0.06
+    text_color: tokens.TEXT
+    icon_color: tokens.MUTED
+    selected_color: tokens.PRIMARY
 
-<DrawerLabelItem@MDNavigationDrawerItem>
-    text_color: "#4a4939"
-    icon_color: "#4a4939"
-    focus_behavior: False
-    selected_color: "#4a4939"
-    _no_ripple_effect: True
-
-<ContentNavigationDrawer>
+<ContentNavigationDrawer>:
 
     MDNavigationDrawerHeader:
-        title: "App Menu"
-        title_color: "#4a4939"
-        spacing: "4dp"
-        padding: "12dp", 0, 0, "56dp"
+        source: app.logo_path
+        title: "Face AI"
+        text: "Offline face recognition"
+        title_color: tokens.TEXT
+        text_color: tokens.MUTED
+        title_font_size: "17sp"
+        text_font_size: "10sp"
+        padding: dp(16), dp(10), dp(16), dp(6)
+
+    MDNavigationDrawerDivider:
 
     MDNavigationDrawerLabel:
-        text: "Go To"
+        text: "WORKSPACE"
 
     DrawerClickableItem:
-        icon: "download"
-        text: "Initialize"
+        icon: "view-dashboard-outline"
+        text: "Home"
         on_press:
             root.nav_drawer.set_state("close")
             root.screen_manager.current = "initScreen"
 
     DrawerClickableItem:
-        icon: "tag-faces"
+        icon: "account-search-outline"
         text: "Face Finder"
         on_press:
             root.nav_drawer.set_state("close")
             root.screen_manager.current = "faceFindScr"
 
     DrawerClickableItem:
-        icon: "security"
+        icon: "shield-lock-outline"
         text: "Secure Vault"
         on_press:
             root.nav_drawer.set_state("close")
             root.screen_manager.current = "securityScr"
 
     DrawerClickableItem:
-        icon: "wrench"
+        icon: "tune-variant"
         text: "Settings & Help"
         on_press:
             root.nav_drawer.set_state("close")
             root.screen_manager.current = "settingsScr"
 
+    MDNavigationDrawerDivider:
+
+    MDNavigationDrawerLabel:
+        text: "STATUS"
+
+    MDBoxLayout:
+        orientation: "horizontal"
+        size_hint_y: None
+        height: dp(34)
+        padding: dp(16), 0
+        spacing: dp(8)
+
+        MDIcon:
+            icon: "circle"
+            font_size: sp(9)
+            theme_text_color: "Custom"
+            text_color: tokens.SUCCESS if app.services_running else tokens.MUTED
+            size_hint: None, None
+            size: dp(12), dp(12)
+            pos_hint: {"center_y": .5}
+        MDLabel:
+            text: "Face engine running" if app.services_running else "Face engine not started"
+            font_size: sp(10)
+            theme_text_color: "Custom"
+            text_color: tokens.MUTED
+
+    MDNavigationDrawerLabel:
+        text: "PRIVACY"
+
+    MDBoxLayout:
+        orientation: "horizontal"
+        size_hint_y: None
+        height: dp(52)
+        padding: dp(16), 0
+        spacing: dp(10)
+
+        MDIcon:
+            icon: "shield-check-outline"
+            font_size: sp(16)
+            theme_text_color: "Custom"
+            text_color: tokens.SUCCESS
+            size_hint: None, None
+            size: dp(18), dp(18)
+            pos_hint: {"center_y": .5}
+        MDLabel:
+            text: "Nothing leaves this device."
+            font_size: sp(10)
+            theme_text_color: "Custom"
+            text_color: tokens.MUTED
+            text_size: self.width, None
+            valign: "center"
+
 ## Main screen
 MDScreen:
+    md_bg_color: tokens.SURFACE
 
-    MainScreenBox: # main container
-        orientation: 'vertical'
-        spacing: dp(4)
-        padding: 0, self.top_pad, 0, 0 # self.bottom_pad
+    MainScreenBox:  # main container
+        orientation: "vertical"
+        padding: 0, self.top_pad, 0, 0
+        spacing: 0
 
-        MDTopAppBar:
-            pos_hint: {"top": 1}
-            elevation: 2
-            title: "Face AI"
-            left_action_items: [["menu", lambda x: nav_drawer.set_state("open")]]
-            md_bg_color: '#874bd1'
+        # --- top app bar ------------------------------------------------
+        MDBoxLayout:
+            orientation: "horizontal"
+            size_hint_y: None
+            height: dp(62)
+            md_bg_color: tokens.PRIMARY
+            padding: dp(6), 0, dp(8), 0
+            spacing: dp(2)
 
+            MDIconButton:
+                icon: "menu"
+                theme_icon_color: "Custom"
+                icon_color: 1, 1, 1, 1
+                on_release: nav_drawer.set_state("open")
+
+            MDBoxLayout:
+                orientation: "vertical"
+                size_hint_y: None
+                height: dp(38)
+                spacing: -dp(1)
+                pos_hint: {"center_y": .5}
+
+                MDLabel:
+                    text: "Face AI"
+                    font_size: sp(18)
+                    bold: True
+                    theme_text_color: "Custom"
+                    text_color: 1, 1, 1, 1
+                MDLabel:
+                    text: "Offline face recognition"
+                    font_size: sp(9)
+                    theme_text_color: "Custom"
+                    text_color: 1, 1, 1, .72
+
+            Widget:
+
+            MDIconButton:
+                icon: "help-circle-outline"
+                theme_icon_color: "Custom"
+                icon_color: 1, 1, 1, 1
+                on_release: app.show_help_dialog()
+
+        # --- content ----------------------------------------------------
         MDNavigationLayout:
 
             MDScreenManager:
                 id: screen_manager
+                transition: sm.NoTransition()
 
                 MDScreen:
                     name: "initScreen"
+                    md_bg_color: tokens.SURFACE
                     InitBox:
                         id: init_screen
 
                 MDScreen:
                     name: "faceFindScr"
+                    md_bg_color: tokens.SURFACE
                     on_enter: app.on_face_matcher_entry()
-                    #on_leave: app.release_wakelock()
                     FaceMatchBox:
                         id: face_match_scr
 
                 MDScreen:
                     name: "securityScr"
+                    md_bg_color: tokens.SURFACE
                     on_enter: app.on_security_enter()
                     on_leave: app.on_security_leave()
                     SecurityBox:
@@ -99,12 +193,15 @@ MDScreen:
 
                 MDScreen:
                     name: "settingsScr"
+                    md_bg_color: tokens.SURFACE
+                    on_enter: app.refresh_output_count()
                     SettingsBox:
                         id: settings_box
 
             MDNavigationDrawer:
                 id: nav_drawer
-                radius: (0, 16, 16, 0)
+                radius: (0, dp(22), dp(22), 0)
+                md_bg_color: tokens.CARD
 
                 ContentNavigationDrawer:
                     screen_manager: screen_manager
