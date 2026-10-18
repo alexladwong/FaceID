@@ -51,6 +51,17 @@ pip install -r requirements.txt # virtual environment is recommended
 python main.py
 ```
 
+### 🚪 Door access pilot
+The app can also run as a local door-access kiosk: register people with
+details, match a live face, log every grant/deny and call a door controller
+(simulated relay or an HTTP webhook with HMAC signing). Start with
+`Access` and `People` in the sidebar.
+
+This is a **pilot**: it is face matching only. Add liveness/anti-spoofing and a
+second factor before connecting a real door. See
+[`docs/ACCESS_PILOT.md`](docs/ACCESS_PILOT.md) for the data model, webhook
+contract, configuration and the production hardening checklist.
+
 ## 🦾 Build your own App
 The Kivy project has a great tool named [Buildozer](https://buildozer.readthedocs.io/en/latest/) which can make mobile apps for `Android` & `iOS`
 

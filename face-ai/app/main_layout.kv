@@ -6,6 +6,8 @@
 #:import SettingsBox screens.setting.SettingsBox
 #:import InitBox screens.init_screen.InitBox
 #:import SecurityBox screens.security.SecurityBox
+#:import AccessBox screens.access.AccessBox
+#:import PeopleBox screens.people.PeopleBox
 #:import NavigationMenu screens.navigation.NavigationMenu
 #:import StatusPill screens.ui.StatusPill
 
@@ -105,6 +107,21 @@ MDScreen:
                     on_enter: app.refresh_recent_outputs()
                     InitBox:
                         id: init_screen
+
+                MDScreen:
+                    name: "accessScr"
+                    md_bg_color: tokens.SURFACE
+                    on_enter: app.on_access_enter()
+                    on_leave: app.on_access_leave()
+                    AccessBox:
+                        id: access_box
+
+                MDScreen:
+                    name: "peopleScr"
+                    md_bg_color: tokens.SURFACE
+                    on_enter: app.on_people_enter()
+                    PeopleBox:
+                        id: people_box
 
                 MDScreen:
                     name: "faceFindScr"

@@ -54,6 +54,16 @@ Builder.load_string('''
         on_press: app.goto_screen("initScreen")
 
     NavItem:
+        icon: "door-open"
+        text: "Access"
+        on_press: app.goto_screen("accessScr")
+
+    NavItem:
+        icon: "account-group-outline"
+        text: "People"
+        on_press: app.goto_screen("peopleScr")
+
+    NavItem:
         icon: "account-search-outline"
         text: "Face Finder"
         on_press: app.goto_screen("faceFindScr")

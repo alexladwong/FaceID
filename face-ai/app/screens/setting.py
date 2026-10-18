@@ -79,6 +79,42 @@ Builder.load_string('''
                     disabled: not app.is_desktop
                     on_release: app.open_data_folder()
 
+            # --- door access ---------------------------------------------
+            AppCard:
+                orientation: "vertical"
+                size_hint_y: None
+                height: self.minimum_height
+                padding: dp(10)
+                spacing: dp(2)
+
+                MDLabel:
+                    text: "DOOR ACCESS"
+                    font_size: sp(9)
+                    bold: True
+                    size_hint_y: None
+                    height: dp(18)
+                    theme_text_color: "Custom"
+                    text_color: tokens.MUTED
+
+                SettingsRow:
+                    icon: "door-open"
+                    tint: tokens.PRIMARY_SOFT
+                    title: "Door"
+                    subtitle: app.door_name + "  -  " + app.door_controller_label
+                    chevron: False
+
+                SettingsRow:
+                    icon: "file-cog-outline"
+                    title: "Door controller config"
+                    subtitle: "Edit controller, webhook URL, secret and threshold"
+                    on_release: app.open_door_config()
+
+                SettingsRow:
+                    icon: "refresh"
+                    title: "Reload door config"
+                    subtitle: "Apply changes without restarting the app"
+                    on_release: app.reload_door_config()
+
             # --- about ---------------------------------------------------
             AppCard:
                 orientation: "vertical"

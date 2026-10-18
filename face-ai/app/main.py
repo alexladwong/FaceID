@@ -33,6 +33,7 @@ from kivy.uix.widget import Widget
 from plyer import filechooser #, camera as pl_cam
 
 # local imports
+from services.access import AccessSvc, DoorController
 from services.faceAi import FaceAiSvc
 from screens import tokens
 from screens.face_match import FaceMatchBox
@@ -47,6 +48,8 @@ from screens.security import (
     SecurityBox,
     SecurityTipsCard,
 )
+from screens.access import AccessEventRow
+from screens.people import PeopleBox, PeopleRow
 from screens.setting import SettingsBox
 from screens.ui import BusyState, EmptyState, NoticeCard, RecentTile
 
@@ -119,6 +122,16 @@ class FaceAiApp(MDApp):
     output_count = NumericProperty(0)
     output_count_label = StringProperty("No generated images yet")
     logo_path = StringProperty("")
+    access_mode = StringProperty("scan")
+    access_state = StringProperty("idle")
+    access_title = StringProperty("Ready to scan")
+    access_message = StringProperty("Look at the camera and press Scan & unlock.")
+    access_detail1 = StringProperty("")
+    access_detail2 = StringProperty("")
+    access_busy = BooleanProperty(False)
+    door_name = StringProperty("Main Gate")
+    door_controller_label = StringProperty("Simulated relay (pilot)")
+    people_count_text = StringProperty("No people registered")
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -153,6 +166,9 @@ class FaceAiApp(MDApp):
         }
         self.is_wide = Window.width >= 980
         self._drawer_open = False
+        self._access_register_requested = False
+        self.access_svc = None
+        self.door = None
         Window.bind(on_resize=self._on_window_resize)
         self.bind(
             models_ready=self._update_home_action,
@@ -273,12 +289,14 @@ class FaceAiApp(MDApp):
         if not meta:
             return False
         screen = self.root.ids.screen_manager.current if self.root else ""
-        if codepoint in ("1", "2", "3", "4"):
+        if codepoint in ("1", "2", "3", "4", "5", "6"):
             target = {
                 "1": "initScreen",
-                "2": "faceFindScr",
-                "3": "securityScr",
-                "4": "settingsScr",
+                "2": "accessScr",
+                "3": "peopleScr",
+                "4": "faceFindScr",
+                "5": "securityScr",
+                "6": "settingsScr",
             }[codepoint]
             self.goto_screen(target)
             return True
@@ -305,6 +323,8 @@ class FaceAiApp(MDApp):
     def _set_nav_selection(self, current):
         labels = {
             "Home": "initScreen",
+            "Access": "accessScr",
+            "People": "peopleScr",
             "Face Finder": "faceFindScr",
             "Secure Vault": "securityScr",
             "Settings": "settingsScr",
@@ -375,6 +395,318 @@ class FaceAiApp(MDApp):
         empty.opacity = 1 if not has_tiles else 0
         empty.disabled = has_tiles
 
+    # -- door access kiosk -----------------------------------------
+    def _sync_door_labels(self):
+        door = None
+        if self.access_svc is not None:
+            door = self.access_svc.door
+        elif self.door is not None:
+            door = self.door
+        if door is None:
+            return
+        self.door = door
+        self.door_name = door.door_name
+        self.door_controller_label = door.status_text()
+
+    def _access_camera_card(self):
+        box = self.root.ids.get("access_box") if self.root else None
+        return box.ids.access_camera if box else None
+
+    def on_access_enter(self, instance=None):
+        self.access_busy = False
+        self.access_mode = "register" if self._access_register_requested else "scan"
+        self._access_register_requested = False
+        self.reset_access_result()
+        card = self._access_camera_card()
+        if card is not None:
+            self._attach_camera_to_card(card)
+        self._scroll_access(0.35 if self.access_mode == "register" else 1.0)
+        if not self.services_running:
+            self.show_toast_msg("Start the face engine to scan or register.", is_error=True)
+        self.refresh_access_events()
+
+    def on_access_leave(self, instance=None):
+        self.stop_camera()
+        self.access_busy = False
+
+    def on_people_enter(self, instance=None):
+        self.refresh_people()
+        self.refresh_access_events()
+
+    def open_access_register(self, instance=None):
+        if self.root.ids.screen_manager.current == "accessScr":
+            self.set_access_mode("register")
+        else:
+            self._access_register_requested = True
+            self.goto_screen("accessScr")
+
+    def set_access_mode(self, mode):
+        if mode not in ("scan", "register"):
+            return
+        self.access_mode = mode
+        if mode == "scan":
+            self.reset_access_result()
+        if self.services_running and not self.camera:
+            card = self._access_camera_card()
+            if card is not None:
+                self._attach_camera_to_card(card)
+        self._scroll_access(0.35 if mode == "register" else 1.0)
+
+    def _scroll_access(self, y):
+        box = self.root.ids.get("access_box") if self.root else None
+        if box is None:
+            return
+        Clock.schedule_once(
+            lambda dt: setattr(box.ids.access_scroll, "scroll_y", y), 0.08
+        )
+
+    def reset_access_result(self):
+        self.access_state = "idle"
+        self.access_title = "Ready to scan"
+        self.access_message = "Look at the camera and press Scan & unlock."
+        self.access_detail1 = ""
+        self.access_detail2 = ""
+
+    def scan_access(self, instance=None):
+        if self.access_busy:
+            return
+        if self.access_svc is None or not self.access_svc.ready:
+            self.show_toast_msg("Start the face engine first.", is_error=True)
+            return
+        frame = self._capture_bgr_frame()
+        if frame is None:
+            self.show_toast_msg(
+                "The camera is not ready yet. Wait a moment and retry.", is_error=True
+            )
+            return
+        self.access_busy = True
+        try:
+            result = self.access_svc.identify(frame)
+        except Exception as e:
+            print(f"Access scan failed: {e}")
+            result = {
+                "decision": "error",
+                "message": "The access check failed.",
+                "door_name": self.door_name,
+            }
+        finally:
+            self.access_busy = False
+        self._apply_access_result(result)
+        self.refresh_access_events()
+
+    def _apply_access_result(self, result):
+        decision = result.get("decision", "error")
+        self.access_state = decision if decision in ("granted", "denied", "error") else "error"
+        person = result.get("person_name") or ""
+        role = result.get("role") or ""
+        dept = result.get("department") or ""
+        score = result.get("score") or 0.0
+        door = result.get("door_name") or self.door_name
+        ts = result.get("ts") or datetime.datetime.now().strftime("%H:%M:%S")
+        line1 = "  -  ".join([p for p in (person, role, dept) if p])
+        if self.access_state == "granted":
+            self.access_title = "Access granted"
+            self.access_message = result.get("door_detail") or "Door unlocked."
+            self.access_detail1 = line1
+            self.access_detail2 = f"Match {score * 100:.1f}%  -  {door}  -  {ts}"
+            self.show_toast_msg(f"Access granted: {person}")
+        elif self.access_state == "denied":
+            self.access_title = "Access denied"
+            self.access_message = result.get("message", "Face not recognised.")
+            self.access_detail1 = line1 if person else ""
+            self.access_detail2 = (
+                f"Match {score * 100:.1f}%  -  {door}  -  {ts}"
+                if person
+                else f"{door}  -  {ts}"
+            )
+            self.show_toast_msg(self.access_message, is_error=True)
+        else:
+            self.access_title = "Door controller error"
+            self.access_message = result.get("message", "The door did not respond.")
+            self.access_detail1 = line1
+            self.access_detail2 = f"{door}  -  {ts}"
+            self.show_toast_msg(self.access_message, is_error=True)
+
+    def register_access_person(self, name_field, id_field, role_field, dept_field, doors_field):
+        if self.access_busy:
+            return
+        if self.access_svc is None or not self.access_svc.ready:
+            self.show_toast_msg("Start the face engine first.", is_error=True)
+            return
+        details = {
+            "full_name": name_field.text.strip(),
+            "external_id": id_field.text.strip(),
+            "role": role_field.text.strip(),
+            "department": dept_field.text.strip(),
+            "doors": doors_field.text.strip() or "all",
+        }
+        if len(details["full_name"]) < 2:
+            self.show_toast_msg("Please enter a full name.", is_error=True)
+            return
+        frame = self._capture_bgr_frame()
+        if frame is None:
+            self.show_toast_msg("The camera is not ready yet.", is_error=True)
+            return
+        self.access_busy = True
+        try:
+            result = self.access_svc.register_person(details, frame)
+        except Exception as e:
+            print(f"Register failed: {e}")
+            result = {"ok": False, "message": "Could not register that face."}
+        finally:
+            self.access_busy = False
+        if not result.get("ok"):
+            self.show_toast_msg(
+                result.get("message", "Could not register that face."), is_error=True
+            )
+            return
+        person = result.get("person") or {}
+        for field in (name_field, id_field, role_field, dept_field):
+            field.text = ""
+        doors_field.text = "all"
+        self.show_toast_msg(f"{person.get('full_name', 'Person')} registered.")
+        self.access_mode = "scan"
+        self.reset_access_result()
+        self.refresh_people()
+        self.refresh_access_events()
+        self.refresh_output_count()
+
+    def _placeholder_label(self, text):
+        return MDLabel(
+            text=text,
+            font_size=sp(10),
+            size_hint_y=None,
+            height=dp(26),
+            theme_text_color="Custom",
+            text_color=tokens.MUTED,
+        )
+
+    def refresh_people(self, instance=None):
+        if not self.root:
+            return
+        box = self.root.ids.people_box.ids.people_registry_box
+        box.clear_widgets()
+        if self.access_svc is None:
+            box.add_widget(self._placeholder_label("The registry is unavailable."))
+            self.people_count_text = "Registry unavailable"
+            return
+        people = self.access_svc.list_people()
+        for person in people:
+            meta = "  -  ".join(
+                [
+                    p
+                    for p in (
+                        person.get("external_id"),
+                        person.get("role"),
+                        person.get("department"),
+                    )
+                    if p
+                ]
+            )
+            doors = person.get("doors") or "all"
+            meta = (meta + "  -  Doors: " + doors) if meta else ("Doors: " + doors)
+            row = PeopleRow(
+                full_name=person["full_name"],
+                meta=meta,
+                active=bool(person["active"]),
+            )
+            row.delete_callback = (
+                lambda p=person: self.confirm_delete_person(p["id"], p["full_name"])
+            )
+            box.add_widget(row)
+        if not people:
+            box.add_widget(self._placeholder_label("No people registered yet."))
+        count = len(people)
+        self.people_count_text = (
+            "No people registered" if count == 0 else f"{count} registered"
+        )
+
+    def _fill_events(self, box, events):
+        box.clear_widgets()
+        if not events:
+            box.add_widget(self._placeholder_label("No access events yet."))
+            return
+        for event in events:
+            row = AccessEventRow(
+                name=event.get("person_name") or "",
+                decision=event.get("decision") or "",
+                detail=f"{event.get('door_name', '')}  -  {event.get('reason', '')}",
+                time_text=(event.get("ts") or "")[5:16],
+            )
+            box.add_widget(row)
+
+    def refresh_access_events(self, instance=None):
+        if not self.root:
+            return
+        events = self.access_svc.list_events(60) if self.access_svc else []
+        access_events = self.root.ids.access_box.ids.access_events_box
+        people_events = self.root.ids.people_box.ids.people_log_box
+        self._fill_events(access_events, events[:6])
+        self._fill_events(people_events, events[:60])
+
+    def confirm_delete_person(self, person_id, full_name):
+        self.show_text_dialog(
+            "Remove person?",
+            f"{full_name} and their face template will be deleted. Their past access log stays.",
+            buttons=[
+                MDFlatButton(
+                    text="Cancel",
+                    theme_text_color="Custom",
+                    text_color=self.theme_cls.primary_color,
+                    on_release=self.txt_dialog_closer,
+                ),
+                MDFlatButton(
+                    text="REMOVE",
+                    theme_text_color="Custom",
+                    text_color=tokens.ERROR,
+                    on_release=lambda inst: self._delete_access_person(person_id),
+                ),
+            ],
+        )
+
+    def _delete_access_person(self, person_id):
+        self.txt_dialog_closer()
+        if self.access_svc is None:
+            return
+        try:
+            self.access_svc.delete_person(person_id)
+        except Exception as e:
+            print(f"Could not delete person: {e}")
+            self.show_toast_msg("Could not remove that person.", is_error=True)
+            return
+        self.refresh_people()
+        self.show_toast_msg("Person removed.")
+
+    def export_access_log(self, instance=None):
+        if self.access_svc is None:
+            self.show_toast_msg("The access registry is unavailable.", is_error=True)
+            return
+        stamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        path = os.path.join(self.op_dir, f"access_log_{stamp}.csv")
+        try:
+            self.access_svc.export_events(path)
+        except Exception as e:
+            print(f"Could not export access log: {e}")
+            self.show_toast_msg("Could not export the access log.", is_error=True)
+            return
+        self.show_toast_msg(f"Access log exported: {os.path.basename(path)}")
+
+    def open_door_config(self, instance=None):
+        if not os.path.exists(self.door_config_path) and self.door is not None:
+            self.door.reload()
+        self.open_file(self.door_config_path)
+
+    def reload_door_config(self, instance=None):
+        if self.access_svc is not None:
+            self.access_svc.door.reload()
+            self.door = self.access_svc.door
+        elif self.door is not None:
+            self.door.reload()
+        else:
+            self.door = DoorController(self.door_config_path)
+        self._sync_door_labels()
+        self.show_toast_msg("Door configuration reloaded.")
+
     def on_start(self):
         # paths setup
         file_m_height = 1
@@ -430,6 +762,22 @@ class FaceAiApp(MDApp):
         os.makedirs(self.sec_file_dir, exist_ok=True)
         os.makedirs(self.tmp_dir, exist_ok=True)
         os.makedirs(db_dir, exist_ok=True)
+        self.access_db_path = os.path.join(db_dir, "access.db")
+        self.door_config_path = os.path.join(self.config_dir, "doors.json")
+        self.access_snapshot_dir = os.path.join(self.op_dir, "access")
+        os.makedirs(self.access_snapshot_dir, exist_ok=True)
+        try:
+            self.access_svc = AccessSvc(
+                self.access_db_path,
+                None,
+                self.door_config_path,
+                self.access_snapshot_dir,
+            )
+            self.door = self.access_svc.door
+            self._sync_door_labels()
+        except Exception as e:
+            print(f"Could not initialise the access registry: {e}")
+            self.access_svc = None
         print(f"Internal model files to be stored in: {self.model_dir}")
         self.config_path = os.path.join(self.config_dir, 'config.json')
         self.resp_path = os.path.join(self.config_dir, 'resp.json')
@@ -470,6 +818,8 @@ class FaceAiApp(MDApp):
         Clock.schedule_once(lambda dt: self.reset_result_panes())
         Clock.schedule_once(lambda dt: self._wire_navigation())
         Clock.schedule_once(lambda dt: self.refresh_recent_outputs())
+        Clock.schedule_once(lambda dt: self.refresh_people())
+        Clock.schedule_once(lambda dt: self.refresh_access_events())
         self.refresh_output_count()
         self._update_home_action()
         print("Init success...")
@@ -764,6 +1114,17 @@ class FaceAiApp(MDApp):
             self.face_ai.start_detection_session()
             self.face_ai.start_recognition_session()
             self.services_running = True
+            if self.access_svc is not None:
+                self.access_svc.face_ai = self.face_ai
+            else:
+                self.access_svc = AccessSvc(
+                    self.access_db_path,
+                    self.face_ai,
+                    self.door_config_path,
+                    self.access_snapshot_dir,
+                )
+                self.door = self.access_svc.door
+            self._sync_door_labels()
             self.show_toast_msg("Face engine started")
         except Exception as e:
             print(f"Could not start the sessions: {e}")
@@ -1186,16 +1547,19 @@ class FaceAiApp(MDApp):
         return cam_indx
 
     def _make_camera_card(self):
+        card = CameraCard()
+        self._attach_camera_to_card(card)
+        return card
+
+    def _attach_camera_to_card(self, card):
         cam_indx = self._camera_index()
         resolution = (960, 720) if platform == "android" else (640, 480)
         if platform == "android":
-            import datetime
             now = datetime.datetime.now()
             self.tmp_login_filename = os.path.join(
                 self.sec_file_dir,
                 f"login_{now.strftime('%Y%m%d')}_{now.strftime('%H%M%S')}.jpg",
             )
-        card = CameraCard()
         self.camera_card = card
         if cam_indx < 0:
             card.show_error("No camera was found on this device.")
@@ -1259,6 +1623,37 @@ class FaceAiApp(MDApp):
         rotate = getattr(self, "_camera_rotate", None)
         if rotate is not None:
             rotate.origin = self.camera.center
+
+    def stop_camera(self):
+        if self.camera:
+            try:
+                self.camera.play = False
+            except Exception:
+                pass
+            if self.camera.parent:
+                self.camera.parent.remove_widget(self.camera)
+            self.camera = None
+        self.camera_card = None
+        self.verifying = False
+
+    def _capture_bgr_frame(self):
+        if not self.camera or not self.camera.texture:
+            return None
+        try:
+            import cv2
+            import numpy as np
+            texture = self.camera.texture
+            width, height = texture.size
+            arr = np.frombuffer(texture.pixels, dtype=np.uint8).reshape((height, width, 4))
+            img = cv2.cvtColor(arr, cv2.COLOR_RGBA2BGR)
+            if platform == "android":
+                img = np.flipud(img)
+            else:
+                img = cv2.rotate(img, cv2.ROTATE_90_CLOCKWISE)
+            return img
+        except Exception as e:
+            print(f"Could not capture a camera frame: {e}")
+            return None
 
     def _refresh_camera_status(self, card=None):
         card = card or self.camera_card
@@ -1459,18 +1854,9 @@ class FaceAiApp(MDApp):
             name_txt = str(instance.text).strip()
         self.verifying = True
         try:
-            import cv2
-            import numpy as np
-            texture = self.camera.texture
-            pixels = texture.pixels
-            width, height = texture.size
-            arr = np.frombuffer(pixels, dtype=np.uint8).reshape((height, width, 4))
-            img = cv2.cvtColor(arr, cv2.COLOR_RGBA2BGR)
-            if platform == "android":
-                img = np.flipud(img)  # Flip up down in android
-            else:
-                # AVFoundation frames arrive rotated 90 degrees
-                img = cv2.rotate(img, cv2.ROTATE_90_CLOCKWISE)
+            img = self._capture_bgr_frame()
+            if img is None:
+                raise ValueError("camera frame is not ready")
             self.sec_face_login_save(name_txt, img, newFace)
         except Exception as e:
             print(f"Error processing frame: {e}")
@@ -1568,13 +1954,10 @@ class FaceAiApp(MDApp):
 
     def on_security_leave(self):
         if self.camera:
-            self.camera.play = False
-            if platform == "android":
-                self.camera = None
             print("Camera has been stopped")
+        self.stop_camera()
         if self.sec_uix:
             self.sec_uix.clear_widgets()
-        self.verifying = False
 
     # Settings section start here
     def refresh_output_count(self, instance=None):
@@ -1659,7 +2042,7 @@ class FaceAiApp(MDApp):
             "Home: download the model files once, then start the engine.\n"
             "Face Finder: one clear face as the source, any photo as the target.\n"
             "Secure Vault: enroll a face to lock and unlock your files.\n\n"
-            "Shortcuts: Ctrl/Cmd+1..4 switch sections, Ctrl/Cmd+O picks a photo,\n"
+            "Shortcuts: Ctrl/Cmd+1..6 switch sections, Ctrl/Cmd+O picks a photo,\n"
             "Ctrl/Cmd+R resets Face Finder, Ctrl/Cmd+L locks the vault, Esc closes the menu.\n\n"
             "Everything is processed on this device.",
             buttons=[
