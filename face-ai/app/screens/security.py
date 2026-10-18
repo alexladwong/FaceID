@@ -6,6 +6,8 @@ from kivy.utils import platform
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.list import TwoLineAvatarIconListItem
 
+from screens.palette import theme
+
 # Local imports (their kv rules are registered here as well).
 from screens.ui import (  # noqa: F401
     AppCard,

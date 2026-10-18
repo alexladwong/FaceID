@@ -119,6 +119,11 @@ class UIInteractionTests(unittest.TestCase):
 
         @step
         def start(dt):
+            from screens.security import CameraCard
+
+            camera = CameraCard()
+            camera.show_error("No camera was found on this device.")
+            check(camera.status == "Unavailable", "camera-less error state renders")
             scrim = app.root.ids.drawer_scrim
             check(
                 scrim.width == 0 and scrim.height == 0,
