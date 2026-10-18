@@ -113,6 +113,9 @@ Existing components: `AppCard`, `IconBadge`, `Pill`, `StatusPill`,
 - Dialogs and file pickers are modal only while open; dismissing one restores
   interaction with the page underneath. The closed-drawer scrim and hidden
   navigation variants are covered by real-pointer regression tests.
+- Camera attach failures render an inline `CameraCard.show_error` state with
+  the reason and a retry control; a machine with no camera no longer crashes
+  the vault or Access screen. This path is covered by the pointer test.
 - Home exposes both **Start face engine** and **Stop face engine**. Stopping
   tears down the camera, engine service handles, vault session and Access face
   capability; it does not merely change a badge.
