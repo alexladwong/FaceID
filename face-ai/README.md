@@ -57,15 +57,27 @@ python main.py
 ```
 
 ### 🚪 Door access pilot
-The app can also run as a local door-access kiosk: register people with
-details, match a live face, log every grant/deny and call a door controller
-(simulated relay or an HTTP webhook with HMAC signing). Start with
-`Access` and `People` in the sidebar.
+The app can also run as a local door-access kiosk. A person can be authorized
+by a live face, a salted personal PIN, an RFID/NFC adapter boundary, or an
+authenticated administrator. All methods share the same person/door/schedule
+policy; every grant, denial and credential change is audited. The Access page
+keeps face scanning and **Alternative access** prominent, while registration
+and credential management live in focused dialogs and the People directory.
 
-This is a **pilot**: it is face matching only. Add liveness/anti-spoofing and a
-second factor before connecting a real door. See
-[`docs/ACCESS_PILOT.md`](docs/ACCESS_PILOT.md) for the data model, webhook
-contract, configuration and the production hardening checklist.
+The door relay can be a **simulated** pilot or a signed **webhook** controller.
+The webhook requires a secret and reports unverified/disconnected/error states;
+it never fails open. Physical face access is deliberately blocked because this
+build has no certified liveness provider. Card access requires a configured
+reader; no RFID hardware is simulated.
+
+Run the service tests from `face-ai/app`:
+```bash
+./.venv/bin/python -m unittest discover -s tests -v
+```
+
+See [`docs/ACCESS_PILOT.md`](docs/ACCESS_PILOT.md) for the data model, PIN/card
+security, administrator rules, webhook contract, configuration and remaining
+production gaps.
 
 ## 🦾 Build your own App
 The Kivy project has a great tool named [Buildozer](https://buildozer.readthedocs.io/en/latest/) which can make mobile apps for `Android` & `iOS`

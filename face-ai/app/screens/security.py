@@ -1,6 +1,6 @@
 from kivy.lang import Builder
 from kivy.metrics import dp, sp
-from kivy.properties import NumericProperty, StringProperty
+from kivy.properties import NumericProperty, ObjectProperty, StringProperty
 from kivy.utils import platform
 
 from kivymd.uix.boxlayout import MDBoxLayout
@@ -87,7 +87,7 @@ Builder.load_string('''
 <CameraCard>:
     orientation: "vertical"
     size_hint_y: None
-    height: dp(368)
+    height: root.preview_height + dp(88)
     padding: dp(14)
     spacing: dp(8)
     MDBoxLayout:
@@ -124,14 +124,25 @@ Builder.load_string('''
             text_size: self.width, None
             theme_text_color: "Custom"
             text_color: theme.muted
+        MDIconButton:
+            icon: "refresh"
+            icon_size: dp(16)
+            size_hint: None, None
+            size: dp(24), dp(24)
+            theme_icon_color: "Custom"
+            icon_color: theme.muted
+            opacity: 1 if root.retry_callback else 0
+            width: dp(24) if root.retry_callback else 0
+            disabled: not root.retry_callback
+            on_release: root.retry_callback() if root.retry_callback else None
     MDBoxLayout:
         size_hint_y: None
-        height: dp(280)
+        height: root.preview_height
         Widget:
         FloatLayout:
             id: cam_holder
             size_hint: None, 1
-            width: min(root.width - dp(64), dp(280) * root.preview_ratio)
+            width: min(root.width - dp(64), root.preview_height * root.preview_ratio)
             canvas.before:
                 Color:
                     rgba: parse_color("#000000")
@@ -519,6 +530,8 @@ class SecAfterLogin(MDBoxLayout):
 class CameraCard(AppCard):
     status = StringProperty("Starting camera...")
     preview_ratio = NumericProperty(4 / 3)
+    preview_height = NumericProperty(dp(280))
+    retry_callback = ObjectProperty(None)
 
     def show_error(self, message):
         self.status = "Unavailable"

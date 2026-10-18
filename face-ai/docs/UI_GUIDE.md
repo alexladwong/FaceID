@@ -56,7 +56,10 @@ Existing components: `AppCard`, `IconBadge`, `Pill`, `StatusPill`,
 ## Responsive rules
 
 - Breakpoint: `app.is_wide` is true at **980 px** and above.
-- Two-column content (vault auth and Face Finder) becomes one column.
+- Two-column content (vault auth, Face Finder and Access camera/actions)
+  becomes one column.
+- The Access camera preview shrinks on phones so the primary actions and result
+  stay near the top of the page rather than below a tall preview.
 - Page padding is 24/18 on wide and 16-24 on phones; all long pages scroll.
 - Upload tiles and result panes stack vertically under the breakpoint.
 - The dashboard quick-action grid is 4 columns on desktop, 2 on phones and 1
@@ -75,6 +78,20 @@ Existing components: `AppCard`, `IconBadge`, `Pill`, `StatusPill`,
 - Secure Vault shows a dedicated page header, a centred locked/enrolment state
   when the engine is off, and the existing face-auth or encrypted file list
   when it is running.
+- Door Access leads with a compact live camera, then the two primary actions
+  (**Scan & unlock**, **Alternative**), a compact result card and the controller
+  card. Registration is a modal; it is never embedded in the Access page.
+- Alternative access is a focused dialog with PIN, card and administrator
+  options. PIN/card fields are password/UID forms; administrator assistance
+  records a reason and optional second approver. Two-factor doors open a
+  single-use PIN challenge.
+- People is a searchable directory with credential badges and status, followed
+  by access and administrative audit logs. Row actions open an
+  administrator-authorized person sheet for enrollment, PIN, cards, policy,
+  suspension and deletion.
+- Dialogs use a custom scrollable form when they contain fields. Content is
+  measured from the fields, not a fixed height, so short PIN forms stay compact
+  and the registration form scrolls on a phone. Cancel is always present.
 
 ## States and feedback
 
@@ -88,7 +105,15 @@ Existing components: `AppCard`, `IconBadge`, `Pill`, `StatusPill`,
   operations. Vault encryption runs off the UI thread; the Upload button shows
   `Working...` while busy and the file list refreshes on completion.
 - Empty: purpose-written empty states, never mock data.
-- Disabled: primary actions disable while their operation runs.
+- Disabled: primary actions disable while their operation runs. Face scan is
+  disabled when the engine or the door's face policy is unavailable; the
+  Alternative button remains available.
+- Door and credential outcomes use `granted`, `denied`, `error`, `unavailable`
+  and `challenge` states with distinct icon/colour. Unknown face/PIN attempts
+  are not attributed to a person; card references are masked.
+- Registration and management forms show validation inline as a toast and keep
+  the dialog open for correction. Successful actions refresh the registry,
+  logs and audit.
 
 ## Themes and motion
 
@@ -106,8 +131,12 @@ Existing components: `AppCard`, `IconBadge`, `Pill`, `StatusPill`,
 - `Ctrl/Cmd+L`: lock the vault.
 - `Esc`: close the drawer or an open dialog.
 - Text fields and navigation items have visible focus/pressed states from
-  KivyMD. Full screen-reader labelling is not implemented; see the remaining
-  gaps in the project report.
+  KivyMD. The register, manage and export icon actions have tooltips.
+- Access/People actions use 42–48 px touch targets. Credential fields are
+  password fields for PINs and never display a stored PIN.
+- Full screen-reader labelling and a complete keyboard focus order for every
+  custom row are not implemented; see the remaining gaps in
+  [`ACCESS_PILOT.md`](ACCESS_PILOT.md).
 
 ## Platform notes
 
@@ -126,10 +155,10 @@ Existing components: `AppCard`, `IconBadge`, `Pill`, `StatusPill`,
 
 | Viewport | Light | Dark | Screens checked |
 | --- | --- | --- | --- |
-| 1200 × 820 (desktop) | yes | yes | Home, Face Finder, Vault, Settings, Access, People |
+| 1200 × 820 (desktop) | yes | yes | Home, Face Finder, Vault, Settings, Access, People, registration, alternative access, person sheet |
 | 760 × 820 (small laptop/tablet) | yes | yes | shell, drawer, Face Finder, Home |
 | 420 × 820 (large phone) | yes | yes | Home, drawer, dialogs, Face Finder |
-| 360 × 800 (phone) | yes | yes | Home, Face Finder, Access, People, Settings, vault |
+| 360 × 800 (phone) | yes | yes | Home, Face Finder, Access, People, Settings, vault, registration, administrator PIN setup |
 | 320 × 700 (small phone) | yes | yes | Home, shell, quick actions |
 
 Only macOS was available for runtime testing in this environment. Android,

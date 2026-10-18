@@ -10,12 +10,22 @@ import requests
 
 from kivymd.app import MDApp
 from kivymd.uix.boxlayout import MDBoxLayout
+from kivymd.uix.gridlayout import MDGridLayout
 from kivymd.uix.navigationdrawer import MDNavigationDrawerItem
 #from kivymd.uix.menu import MDDropdownMenu
 from kivymd.uix.filemanager import MDFileManager
 from kivymd.uix.label import MDLabel
 from kivymd.uix.dialog import MDDialog
-from kivymd.uix.button import MDFillRoundFlatIconButton, MDFlatButton, MDFloatingActionButton
+from kivymd.uix.button import (
+    MDFillRoundFlatIconButton,
+    MDFlatButton,
+    MDFloatingActionButton,
+    MDIconButton,
+    MDTextButton,
+)
+from kivymd.uix.textfield import MDTextField
+from kivymd.uix.card import MDCard
+from kivy.uix.scrollview import ScrollView
 
 #
 from kivy.animation import Animation
@@ -49,9 +59,9 @@ from screens.security import (
     SecurityTipsCard,
 )
 from screens.access import AccessEventRow
-from screens.people import PeopleBox, PeopleRow
+from screens.people import AuditEventRow, PeopleBox, PeopleRow
 from screens.setting import SettingsBox
-from screens.ui import AppCard, BusyState, EmptyState, IconBadge, NoticeCard, RecentTile
+from screens.ui import AppCard, BusyState, EmptyState, IconBadge, NoticeCard, RecentTile, StatusPill
 
 # IMPORTANT: Set this property for keyboard behavior
 Window.softinput_mode = "below_target"
@@ -135,13 +145,28 @@ class FaceAiApp(MDApp):
     access_detail1 = StringProperty("")
     access_detail2 = StringProperty("")
     access_busy = BooleanProperty(False)
+    access_controller_label = StringProperty("Simulated relay")
+    access_controller_detail = StringProperty("No physical door is connected.")
+    access_controller_state = StringProperty("simulated")
+    access_controller_bg = StringProperty(theme.primary_soft)
+    access_controller_fg = StringProperty(theme.primary_text)
+    access_fail_mode = StringProperty("fail_secure")
+    access_policy_label = StringProperty("Single factor")
+    access_two_factor = BooleanProperty(False)
+    access_face_available = BooleanProperty(False)
+    access_face_warning = StringProperty("")
+    access_card_status = StringProperty("No card reader connected")
+    access_card_available = BooleanProperty(False)
+    people_search = StringProperty("")
+    people_filter = StringProperty("all")
+    people_admin_missing = BooleanProperty(True)
+    people_count_text = StringProperty("No people registered")
     theme_dark = BooleanProperty(False)
     theme_label = StringProperty("Light")
     reduce_motion = BooleanProperty(False)
     motion_label = StringProperty("Off")
     door_name = StringProperty("Main Gate")
     door_controller_label = StringProperty("Simulated relay (pilot)")
-    people_count_text = StringProperty("No people registered")
     vault_search = StringProperty("")
     vault_sort = StringProperty("date")
     vault_sort_label = StringProperty("Newest")
@@ -519,6 +544,49 @@ class FaceAiApp(MDApp):
         self.door = door
         self.door_name = door.door_name
         self.door_controller_label = door.status_text()
+        self._refresh_access_status()
+
+    def _refresh_access_status(self):
+        if self.access_svc is None:
+            self.access_controller_label = "Access registry unavailable"
+            self.access_controller_detail = "The local access database could not be opened."
+            self.access_controller_state = "disconnected"
+            self.access_face_available = False
+            self.access_face_warning = "Face access is unavailable."
+            self.access_card_status = "No card reader connected"
+            self.access_card_available = False
+            return
+        controller = self.access_svc.controller_status()
+        face = self.access_svc.face_state()
+        reader = self.access_svc.card_reader_status()
+        self.access_controller_state = controller.get("state", "disconnected")
+        if self.access_controller_state == "connected":
+            self.access_controller_bg = theme.success_soft
+            self.access_controller_fg = theme.success
+        elif self.access_controller_state == "simulated":
+            self.access_controller_bg = theme.primary_soft
+            self.access_controller_fg = theme.primary_text
+        elif self.access_controller_state == "unverified":
+            self.access_controller_bg = theme.warning_soft
+            self.access_controller_fg = theme.warning
+        else:
+            self.access_controller_bg = theme.error_soft
+            self.access_controller_fg = theme.error
+        self.access_controller_label = controller.get("label", "Controller unavailable")
+        self.access_controller_detail = controller.get("detail", "")
+        self.door_controller_label = self.access_controller_label
+        self.access_fail_mode = self.access_svc.door.fail_mode
+        self.access_two_factor = self.access_svc.door.require_two_factor
+        self.access_policy_label = "Face/card + PIN" if self.access_two_factor else "Single factor"
+        self.access_face_available = bool(face.get("enabled") and self.access_svc.ready)
+        self.access_card_available = bool(reader.get("available"))
+        self.access_card_status = reader.get("label", "No card reader connected")
+        warning = ""
+        if not self.services_running:
+            warning = "The face engine is off. PIN, card and administrator assistance remain available."
+        elif not face.get("enabled"):
+            warning = face.get("detail", "Face access is unavailable at this door.")
+        self.access_face_warning = warning
 
     def _access_camera_card(self):
         box = self.root.ids.get("access_box") if self.root else None
@@ -526,8 +594,6 @@ class FaceAiApp(MDApp):
 
     def on_access_enter(self, instance=None):
         self.access_busy = False
-        self.access_mode = "register" if self._access_register_requested else "scan"
-        self._access_register_requested = False
         self.reset_access_result()
         card = self._access_camera_card()
         if card is not None:
@@ -535,9 +601,13 @@ class FaceAiApp(MDApp):
                 self._attach_camera_to_card(card)
             else:
                 card.status = "Engine off"
-        self._scroll_access(0.35 if self.access_mode == "register" else 1.0)
-        if not self.services_running:
-            self.show_toast_msg("Start the face engine to scan or register.", is_error=True)
+        if self.root is not None:
+            box = self.root.ids.get("access_box")
+            if box is not None:
+                Clock.schedule_once(
+                    lambda dt: setattr(box.ids.access_scroll, "scroll_y", 1.0), 0.08
+                )
+        self._refresh_access_status()
         self.refresh_access_events()
 
     def on_access_leave(self, instance=None):
@@ -547,46 +617,133 @@ class FaceAiApp(MDApp):
     def on_people_enter(self, instance=None):
         self.refresh_people()
         self.refresh_access_events()
+        self._refresh_access_status()
+
+    def retry_access_camera(self):
+        if self.access_svc is None:
+            return
+        if not self.services_running:
+            self.show_toast_msg("Start the face engine first.", is_error=True)
+            return
+        card = self._access_camera_card()
+        if card is None:
+            return
+        self._attach_camera_to_card(card)
+        self.show_toast_msg("Retrying the camera...")
 
     def open_access_register(self, instance=None):
-        if self.root.ids.screen_manager.current == "accessScr":
-            self.set_access_mode("register")
-        else:
-            self._access_register_requested = True
-            self.goto_screen("accessScr")
-
-    def set_access_mode(self, mode):
-        if mode not in ("scan", "register"):
+        if self.access_svc is None:
+            self.show_toast_msg("The access registry is unavailable.", is_error=True)
             return
-        self.access_mode = mode
-        if mode == "scan":
-            self.reset_access_result()
-        if self.services_running and not self.camera:
-            card = self._access_camera_card()
-            if card is not None:
-                self._attach_camera_to_card(card)
-        self._scroll_access(0.35 if mode == "register" else 1.0)
-
-    def _scroll_access(self, y):
-        box = self.root.ids.get("access_box") if self.root else None
-        if box is None:
+        if not self.services_running or not self.access_svc.ready:
+            self.show_toast_msg("Start the face engine before registering a face.", is_error=True)
             return
-        Clock.schedule_once(
-            lambda dt: setattr(box.ids.access_scroll, "scroll_y", y), 0.08
+        if self.current_screen != "accessScr":
+            self.show_toast_msg("Opening the enrollment camera...")
+        self._with_access_camera(self._open_registration_flow)
+
+    def open_admin_register(self, instance=None):
+        if self.access_svc is None:
+            self.show_toast_msg("The access registry is unavailable.", is_error=True)
+            return
+        if self.access_svc.admin_required():
+            self.show_toast_msg("An administrator is already configured.", is_error=True)
+            return
+        if not self.services_running or not self.access_svc.ready:
+            self.show_toast_msg("Start the face engine before registering an administrator.", is_error=True)
+            return
+        self._with_access_camera(
+            lambda: self._show_registration_dialog(None, None, default_role="Admin")
         )
+
+    def open_existing_admin_pin(self, instance=None):
+        if self.access_svc is None:
+            self.show_toast_msg("The access registry is unavailable.", is_error=True)
+            return
+        if self.access_svc.admin_required():
+            self.show_toast_msg("An administrator PIN is already configured.", is_error=True)
+            return
+        ref = self._tf("Administrator ID")
+        pin = self._tf("New administrator PIN (4-8 digits)", password=True, numeric=True)
+        confirm = self._tf("Confirm PIN", password=True, numeric=True)
+
+        def submit(dialog):
+            if not ref.text.strip():
+                self.show_toast_msg("Enter the existing administrator ID.", is_error=True)
+                return
+            if not re.fullmatch(r"\d{4,8}", pin.text or ""):
+                self.show_toast_msg("PIN must be 4-8 digits.", is_error=True)
+                return
+            if pin.text != confirm.text:
+                self.show_toast_msg("PINs do not match.", is_error=True)
+                return
+            person = self.access_svc.db.find_person(ref.text.strip())
+            if not person:
+                self.show_toast_msg("That person is not in the directory.", is_error=True)
+                return
+            result = self.access_svc.set_pin(person["id"], pin.text)
+            if not result.get("ok"):
+                self.show_toast_msg(result.get("message", "Could not set the administrator PIN."), is_error=True)
+                return
+            dialog.dismiss()
+            self.refresh_people()
+            self.show_toast_msg("Administrator PIN configured.")
+
+        self._dialog_form("Set up an existing administrator", [ref, pin, confirm], "SET PIN", submit)
+
+    def _with_access_camera(self, callback):
+        if self.current_screen == "accessScr":
+            card = self._access_camera_card()
+            if card is not None and self.camera is None and self.services_running:
+                self._attach_camera_to_card(card)
+                Clock.schedule_once(lambda dt: callback(), 0.5)
+            else:
+                callback()
+            return
+        self.goto_screen("accessScr")
+        Clock.schedule_once(lambda dt: self._finish_access_camera_flow(callback), 1.4)
+
+    def _finish_access_camera_flow(self, callback):
+        if self.current_screen != "accessScr":
+            return
+        card = self._access_camera_card()
+        if card is not None and self.camera is None and self.services_running:
+            self._attach_camera_to_card(card)
+            # The camera texture and the modal both animate. Let the camera
+            # settle before opening the form so its open animation is not lost.
+            Clock.schedule_once(lambda dt: callback(), 0.5)
+        else:
+            callback()
+
+    def _open_registration_flow(self):
+        if self.access_svc.admin_required():
+            self._require_admin(
+                "Register person",
+                "An administrator PIN is required to add a person once an administrator exists.",
+                lambda actor_ref, actor_pin: self._show_registration_dialog(actor_ref, actor_pin),
+            )
+        else:
+            self._show_registration_dialog(None, None)
 
     def reset_access_result(self):
         self.access_state = "idle"
         self.access_title = "Ready to scan"
-        self.access_message = "Look at the camera and press Scan & unlock."
+        self.access_message = "Look at the camera or choose an alternative method."
         self.access_detail1 = ""
         self.access_detail2 = ""
 
     def scan_access(self, instance=None):
         if self.access_busy:
             return
-        if self.access_svc is None or not self.access_svc.ready:
-            self.show_toast_msg("Start the face engine first.", is_error=True)
+        if self.access_svc is None:
+            self.show_toast_msg("The access registry is unavailable.", is_error=True)
+            return
+        if not self.access_face_available:
+            self.show_toast_msg(
+                self.access_face_warning or "Face access is unavailable. Use Alternative.",
+                is_error=True,
+            )
+            self.open_alternative_access()
             return
         frame = self._capture_bgr_frame()
         if frame is None:
@@ -594,158 +751,444 @@ class FaceAiApp(MDApp):
                 "The camera is not ready yet. Wait a moment and retry.", is_error=True
             )
             return
-        self.access_busy = True
-        try:
-            result = self.access_svc.identify(frame)
-        except Exception as e:
-            print(f"Access scan failed: {e}")
-            result = {
-                "decision": "error",
-                "message": "The access check failed.",
-                "door_name": self.door_name,
-            }
-        finally:
-            self.access_busy = False
-        self._apply_access_result(result)
-        self.refresh_access_events()
+        self._run_access_check(lambda: self.access_svc.authenticate_face(frame))
+
+    def _method_label(self, method):
+        return {
+            "face": "FACE",
+            "pin": "PIN",
+            "card": "CARD",
+            "admin": "ADMIN",
+            "face+pin": "FACE+PIN",
+            "card+pin": "CARD+PIN",
+            "second_factor": "2FA",
+        }.get(str(method or "").lower(), str(method or "").upper() or "ACCESS")
 
     def _apply_access_result(self, result):
+        if not result:
+            result = {"decision": "error", "message": "No access result returned."}
         decision = result.get("decision", "error")
-        self.access_state = decision if decision in ("granted", "denied", "error") else "error"
+        self.access_state = (
+            decision
+            if decision in ("granted", "denied", "error", "unavailable")
+            else ("challenge" if decision == "second_factor_required" else "error")
+        )
         person = result.get("person_name") or ""
         role = result.get("role") or ""
         dept = result.get("department") or ""
-        score = result.get("score") or 0.0
+        method = result.get("method") or ""
+        method_label = self._method_label(method)
         door = result.get("door_name") or self.door_name
-        ts = result.get("ts") or datetime.datetime.now().strftime("%H:%M:%S")
+        ts = result.get("ts") or datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         line1 = "  -  ".join([p for p in (person, role, dept) if p])
-        if self.access_state == "granted":
+        detail2 = f"{method_label}  -  {door}  -  {ts}"
+        if decision == "granted":
             self.access_title = "Access granted"
-            self.access_message = result.get("door_detail") or "Door unlocked."
+            self.access_message = result.get("door_detail") or result.get("message") or "Door unlocked."
             self.access_detail1 = line1
-            self.access_detail2 = f"Match {score * 100:.1f}%  -  {door}  -  {ts}"
-            self.show_toast_msg(f"Access granted: {person}")
-        elif self.access_state == "denied":
+            self.access_detail2 = detail2
+            self.show_toast_msg(f"Access granted: {person or method_label}")
+        elif decision == "second_factor_required":
+            self.access_state = "challenge"
+            self.access_title = "PIN required"
+            self.access_message = result.get("message") or "Complete the second factor with a PIN."
+            self.access_detail1 = line1
+            self.access_detail2 = detail2
+            self._pending_challenge = result.get("challenge_token")
+            Clock.schedule_once(lambda dt: self._open_second_factor_dialog(result), 0.1)
+        elif decision == "unavailable":
+            self.access_title = "Alternative access unavailable"
+            self.access_message = result.get("message", "That method is not available.")
+            self.access_detail1 = ""
+            self.access_detail2 = detail2
+            self.show_toast_msg(self.access_message, is_error=True)
+        elif decision == "denied":
             self.access_title = "Access denied"
-            self.access_message = result.get("message", "Face not recognised.")
+            self.access_message = result.get("message", "Access was denied.")
             self.access_detail1 = line1 if person else ""
-            self.access_detail2 = (
-                f"Match {score * 100:.1f}%  -  {door}  -  {ts}"
-                if person
-                else f"{door}  -  {ts}"
-            )
+            self.access_detail2 = detail2
             self.show_toast_msg(self.access_message, is_error=True)
         else:
+            self.access_state = "error"
             self.access_title = "Door controller error"
             self.access_message = result.get("message", "The door did not respond.")
             self.access_detail1 = line1
-            self.access_detail2 = f"{door}  -  {ts}"
+            self.access_detail2 = detail2
             self.show_toast_msg(self.access_message, is_error=True)
 
-    def register_access_person(self, name_field, id_field, role_field, dept_field, doors_field):
+    def _run_access_check(self, operation):
+        """Run credential verification and the door call off the UI thread."""
         if self.access_busy:
             return
-        if self.access_svc is None or not self.access_svc.ready:
-            self.show_toast_msg("Start the face engine first.", is_error=True)
-            return
-        details = {
-            "full_name": name_field.text.strip(),
-            "external_id": id_field.text.strip(),
-            "role": role_field.text.strip(),
-            "department": dept_field.text.strip(),
-            "doors": doors_field.text.strip() or "all",
-        }
-        if len(details["full_name"]) < 2:
-            self.show_toast_msg("Please enter a full name.", is_error=True)
-            return
-        frame = self._capture_bgr_frame()
-        if frame is None:
-            self.show_toast_msg("The camera is not ready yet.", is_error=True)
-            return
         self.access_busy = True
-        try:
-            result = self.access_svc.register_person(details, frame)
-        except Exception as e:
-            print(f"Register failed: {e}")
-            result = {"ok": False, "message": "Could not register that face."}
-        finally:
-            self.access_busy = False
-        if not result.get("ok"):
-            self.show_toast_msg(
-                result.get("message", "Could not register that face."), is_error=True
+        self.access_state = "checking"
+        self.access_title = "Checking credentials"
+        self.access_message = "Applying person, door and schedule policy..."
+        self.access_detail1 = ""
+        self.access_detail2 = ""
+
+        def worker():
+            try:
+                result = operation()
+            except Exception as e:
+                print(f"Access check failed: {e}")
+                result = {
+                    "decision": "error",
+                    "message": "The access check failed unexpectedly.",
+                    "door_name": self.door_name,
+                    "method": "access",
+                }
+            Clock.schedule_once(lambda dt: self._complete_access_check(result), 0)
+
+        Thread(target=worker, daemon=True).start()
+
+    def _complete_access_check(self, result):
+        self.access_busy = False
+        self._apply_access_result(result)
+        self.refresh_access_events()
+
+    # -- alternative methods --------------------------------------
+    def _tf(self, hint, text="", password=False, numeric=False):
+        return MDTextField(
+            hint_text=hint,
+            text=text,
+            password=password,
+            mode="rectangle",
+            font_size=sp(12),
+            size_hint_y=None,
+            height=dp(50),
+            input_filter="int" if numeric else None,
+        )
+
+    def _form_scroll(self, box, max_height=430):
+        scroll = ScrollView(do_scroll_x=False, bar_width=dp(2))
+        scroll.size_hint = (1, None)
+        scroll.height = min(dp(max_height), max(dp(120), Window.height - dp(270)))
+        scroll.add_widget(box)
+        return scroll
+
+    def _dialog_form(self, title, fields, submit_label, submit_callback):
+        box = MDBoxLayout(
+            orientation="vertical",
+            spacing=dp(8),
+            size_hint_y=None,
+            padding=[0, dp(28), 0, 0],
+        )
+        for field in fields:
+            box.add_widget(field)
+        content_height = (
+            sum(field.height for field in fields)
+            + dp(8) * max(0, len(fields) - 1)
+            + dp(38)
+        )
+        box.height = content_height
+        scroll = self._form_scroll(box)
+        scroll.height = min(scroll.height, content_height)
+        content = MDBoxLayout(
+            orientation="vertical",
+            size_hint_y=None,
+            height=scroll.height,
+        )
+        content.add_widget(scroll)
+        dialog = MDDialog(
+            title=title,
+            type="custom",
+            content_cls=content,
+            buttons=[
+                MDFlatButton(
+                    text="Cancel",
+                    theme_text_color="Custom",
+                    text_color=theme.muted,
+                    on_release=self.txt_dialog_closer,
+                ),
+                MDFlatButton(
+                    text=submit_label,
+                    theme_text_color="Custom",
+                    text_color=theme.primary_text,
+                    on_release=lambda inst: submit_callback(dialog),
+                ),
+            ],
+            radius=[dp(18), dp(18), dp(18), dp(18)],
+        )
+        self.txt_dialog = dialog
+        dialog.open()
+        return dialog
+
+    def open_alternative_access(self):
+        if self.access_busy:
+            return
+        if self.access_svc is None:
+            self.show_toast_msg("The access registry is unavailable.", is_error=True)
+            return
+        svc = self.access_svc
+        methods = svc.door.allowed_methods
+        reader = svc.card_reader_status()
+        face = svc.face_state()
+        lines = [
+            "Use an authorized backup method. All methods apply the same person, door and schedule policy.",
+            "",
+            f"Face: {'available' if face.get('enabled') else 'unavailable'}  |  PIN: {'available' if 'pin' in methods else 'disabled'}",
+            f"Card: {reader.get('label')}  |  Administrator assistance: {'available' if 'admin' in methods else 'disabled'}",
+        ]
+        buttons = [
+            MDFlatButton(
+                text="Cancel",
+                theme_text_color="Custom",
+                text_color=theme.muted,
+                on_release=self.txt_dialog_closer,
+            ),
+            MDFlatButton(
+                text="ADMIN",
+                theme_text_color="Custom",
+                text_color=theme.warning,
+                on_release=lambda inst: self._from_alt_dialog(self._open_admin_assistance_dialog),
+            ),
+            MDFlatButton(
+                text="CARD",
+                theme_text_color="Custom",
+                text_color=theme.primary_text if reader.get("available") else theme.muted,
+                on_release=lambda inst: self._from_alt_dialog(self._open_card_dialog),
+            ),
+            MDFlatButton(
+                text="PIN",
+                theme_text_color="Custom",
+                text_color=theme.primary_text if "pin" in methods else theme.muted,
+                on_release=lambda inst: self._from_alt_dialog(self._open_pin_dialog),
+            ),
+        ]
+        self.txt_dialog = MDDialog(
+            title="Alternative access",
+            text="\n".join(lines),
+            buttons=buttons,
+            radius=[dp(18), dp(18), dp(18), dp(18)],
+        )
+        self.txt_dialog.open()
+
+    def _from_alt_dialog(self, callback):
+        self.txt_dialog_closer()
+        Clock.schedule_once(lambda dt: callback(), 0.15)
+
+    def _open_pin_dialog(self):
+        svc = self.access_svc
+        if svc is None or "pin" not in svc.door.allowed_methods:
+            self.show_toast_msg("PIN access is disabled at this door.", is_error=True)
+            return
+        ref = self._tf("Staff / resident ID")
+        pin = self._tf("Personal PIN", password=True, numeric=True)
+
+        def submit(dialog):
+            if not ref.text.strip() or not pin.text:
+                self.show_toast_msg("Enter your ID and PIN.", is_error=True)
+                return
+            person_ref = ref.text.strip()
+            entered_pin = pin.text
+            dialog.dismiss()
+            self._run_access_check(lambda: svc.authenticate_pin(person_ref, entered_pin))
+
+        self._dialog_form("PIN access", [ref, pin], "UNLOCK", submit)
+
+    def _open_card_dialog(self):
+        svc = self.access_svc
+        reader = svc.card_reader_status() if svc else {}
+        if svc is None or not reader.get("available"):
+            self.show_text_dialog(
+                "Card reader unavailable",
+                reader.get("label", "No card reader is connected to this kiosk.")
+                + "\n\nA card credential cannot be accepted without a configured reader.",
+                buttons=[
+                    MDFlatButton(
+                        text="Close",
+                        theme_text_color="Custom",
+                        text_color=theme.primary_text,
+                        on_release=self.txt_dialog_closer,
+                    )
+                ],
             )
             return
-        person = result.get("person") or {}
-        for field in (name_field, id_field, role_field, dept_field):
-            field.text = ""
-        doors_field.text = "all"
-        self.show_toast_msg(f"{person.get('full_name', 'Person')} registered.")
-        self.access_mode = "scan"
-        self.reset_access_result()
-        self.refresh_people()
-        self.refresh_access_events()
-        self.refresh_output_count()
+        if "card" not in svc.door.allowed_methods:
+            self.show_toast_msg("Card access is disabled at this door.", is_error=True)
+            return
+        uid = self._tf("Scan or enter card UID")
 
-    def _placeholder_label(self, text):
-        return MDLabel(
-            text=text,
+        def submit(dialog):
+            if not uid.text.strip():
+                self.show_toast_msg("Present a card or enter its UID.", is_error=True)
+                return
+            card_uid = uid.text
+            dialog.dismiss()
+            self._run_access_check(lambda: svc.authenticate_card(card_uid))
+
+        self._dialog_form("Card access", [uid], "READ CARD", submit)
+
+    def _open_admin_assistance_dialog(self):
+        svc = self.access_svc
+        if svc is None or "admin" not in svc.door.allowed_methods:
+            self.show_toast_msg("Administrator assistance is disabled at this door.", is_error=True)
+            return
+        subject = self._tf("Subject staff / resident ID")
+        reason = self._tf("Reason (audit logged)")
+        admin_ref = self._tf("Administrator ID")
+        admin_pin = self._tf("Administrator PIN", password=True, numeric=True)
+        approver_ref = self._tf("Approver ID (if required)")
+        approver_pin = self._tf("Approver PIN", password=True, numeric=True)
+
+        def submit(dialog):
+            if not subject.text.strip() or len(reason.text.strip()) < 5:
+                self.show_toast_msg("Enter the subject and a reason of at least 5 characters.", is_error=True)
+                return
+            if not admin_ref.text.strip() or not admin_pin.text:
+                self.show_toast_msg("Administrator credentials are required.", is_error=True)
+                return
+            actor = admin_ref.text.strip()
+            actor_pin = admin_pin.text
+            subject_ref = subject.text.strip()
+            recorded_reason = reason.text.strip()
+            approver = approver_ref.text.strip()
+            approver_code = approver_pin.text
+            dialog.dismiss()
+            self._run_access_check(
+                lambda: svc.authorize_admin_access(
+                    actor, actor_pin, subject_ref, recorded_reason,
+                    approver, approver_code,
+                )
+            )
+
+        self._dialog_form(
+            "Administrator assistance",
+            [subject, reason, admin_ref, admin_pin, approver_ref, approver_pin],
+            "AUTHORIZE",
+            submit,
+        )
+
+    def _open_second_factor_dialog(self, result):
+        svc = self.access_svc
+        token = result.get("challenge_token")
+        if svc is None or not token:
+            return
+        pin = self._tf("PIN for this person", password=True, numeric=True)
+
+        def submit(dialog):
+            if not pin.text:
+                self.show_toast_msg("Enter the PIN to complete the second factor.", is_error=True)
+                return
+            entered = pin.text
+            dialog.dismiss()
+            self._pending_challenge = None
+            self._run_access_check(lambda: svc.complete_challenge(token, entered))
+
+        self._dialog_form("Second factor required", [pin], "VERIFY", submit)
+
+    def _require_admin(self, title, detail, callback):
+        if self.access_svc is None:
+            self.show_toast_msg("The access registry is unavailable.", is_error=True)
+            return
+        if not self.access_svc.admin_required():
+            self.show_toast_msg(
+                "No administrator PIN is configured. Register or promote an administrator first.",
+                is_error=True,
+            )
+            return
+        admin_ref = self._tf("Administrator ID")
+        admin_pin = self._tf("Administrator PIN", password=True, numeric=True)
+
+        def submit(dialog):
+            result = self.access_svc.verify_admin(admin_ref.text.strip(), admin_pin.text)
+            if not result.get("ok"):
+                self.show_toast_msg(result.get("message", "Administrator authorization failed."), is_error=True)
+                return
+            dialog.dismiss()
+            callback(admin_ref.text.strip(), admin_pin.text)
+
+        self._dialog_form(title, [admin_ref, admin_pin], "AUTHORIZE", submit)
+
+    # -- registration modal ---------------------------------------
+    def _show_registration_dialog(self, actor_ref=None, actor_pin=None, default_role="Staff"):
+        if self.access_svc is None or not self.access_svc.ready:
+            self.show_toast_msg("Start the face engine before registering.", is_error=True)
+            return
+        name = self._tf("Full name *")
+        ext_id = self._tf("Staff / resident ID")
+        role = self._tf("Role (Admin, Staff, Resident)", text=default_role)
+        dept = self._tf("Department / zone")
+        doors = self._tf("Doors (all or comma separated)", text="all")
+        days = self._tf("Days (0=Mon ... 6=Sun)", text="0,1,2,3,4,5,6")
+        start = self._tf("Start (HH:MM)", text="00:00")
+        end = self._tf("End (HH:MM)", text="23:59")
+        pin = self._tf("PIN (optional, 4-8 digits)", password=True, numeric=True)
+        pin2 = self._tf("Confirm PIN", password=True, numeric=True)
+        note = MDLabel(
+            text="Face enrollment captures one clear face from the live camera. The first PIN must belong to an administrator role.",
             font_size=sp(10),
             size_hint_y=None,
-            height=dp(26),
+            height=dp(34),
+            text_size=(dp(480), None),
             theme_text_color="Custom",
             text_color=theme.muted,
         )
 
-    def refresh_people(self, instance=None):
-        if not self.root:
-            return
-        box = self.root.ids.people_box.ids.people_registry_box
-        box.clear_widgets()
-        if self.access_svc is None:
-            box.add_widget(self._placeholder_label("The registry is unavailable."))
-            self.people_count_text = "Registry unavailable"
-            return
-        people = self.access_svc.list_people()
-        for person in people:
-            meta = "  -  ".join(
-                [
-                    p
-                    for p in (
-                        person.get("external_id"),
-                        person.get("role"),
-                        person.get("department"),
-                    )
-                    if p
-                ]
+        def submit(dialog):
+            if len(name.text.strip()) < 2:
+                self.show_toast_msg("Enter a full name.", is_error=True)
+                return
+            if pin.text or pin2.text:
+                if pin.text != pin2.text or not re.fullmatch(r"\d{4,8}", pin.text or ""):
+                    self.show_toast_msg("PINs must match and contain 4-8 digits.", is_error=True)
+                    return
+            details = {
+                "full_name": name.text.strip(),
+                "external_id": ext_id.text.strip(),
+                "role": role.text.strip(),
+                "department": dept.text.strip(),
+                "doors": doors.text.strip() or "all",
+                "schedule_days": days.text.strip() or "0,1,2,3,4,5,6",
+                "schedule_start": start.text.strip() or "00:00",
+                "schedule_end": end.text.strip() or "23:59",
+            }
+            frame = self._capture_bgr_frame()
+            if frame is None:
+                self.show_toast_msg("The camera is not ready yet.", is_error=True)
+                return
+            result = self.access_svc.register_person(
+                details, frame, actor_ref=actor_ref, actor_pin=actor_pin
             )
-            doors = person.get("doors") or "all"
-            meta = (meta + "  -  Doors: " + doors) if meta else ("Doors: " + doors)
-            row = PeopleRow(
-                full_name=person["full_name"],
-                meta=meta,
-                active=bool(person["active"]),
-            )
-            row.delete_callback = (
-                lambda p=person: self.confirm_delete_person(p["id"], p["full_name"])
-            )
-            box.add_widget(row)
-        if not people:
-            box.add_widget(self._placeholder_label("No people registered yet."))
-        count = len(people)
-        self.people_count_text = (
-            "No people registered" if count == 0 else f"{count} registered"
+            if not result.get("ok"):
+                self.show_toast_msg(result.get("message", "Could not register that person."), is_error=True)
+                return
+            person = result.get("person") or {}
+            pin_note = ""
+            if pin.text:
+                pin_result = self.access_svc.set_pin(
+                    person["id"], pin.text, actor_ref=actor_ref, actor_pin=actor_pin
+                )
+                if not pin_result.get("ok"):
+                    pin_note = f" PIN not set: {pin_result.get('message')}"
+            dialog.dismiss()
+            self.show_toast_msg(f"{person.get('full_name', 'Person')} registered.{pin_note}")
+            self.refresh_people()
+            self.refresh_access_events()
+            self._refresh_access_status()
+
+        self._dialog_form(
+            "Register a person",
+            [name, ext_id, role, dept, doors, days, start, end, note, pin, pin2],
+            "CAPTURE & REGISTER",
+            submit,
         )
 
+    # -- access activity ------------------------------------------
     def _fill_events(self, box, events):
         box.clear_widgets()
         if not events:
             box.add_widget(self._placeholder_label("No access events yet."))
             return
         for event in events:
+            method = event.get("method") or "face"
+            detail = f"{event.get('door_name', '')}  -  {event.get('reason', '')}"
             row = AccessEventRow(
                 name=event.get("person_name") or "",
                 decision=event.get("decision") or "",
-                detail=f"{event.get('door_name', '')}  -  {event.get('reason', '')}",
+                detail=detail,
+                method_label=self._method_label(method),
                 time_text=(event.get("ts") or "")[5:16],
             )
             box.add_widget(row)
@@ -758,39 +1201,48 @@ class FaceAiApp(MDApp):
         people_events = self.root.ids.people_box.ids.people_log_box
         self._fill_events(access_events, events[:6])
         self._fill_events(people_events, events[:60])
+        self._fill_audit(self.root.ids.people_box.ids.people_audit_box)
 
-    def confirm_delete_person(self, person_id, full_name):
-        self.show_text_dialog(
-            "Remove person?",
-            f"{full_name} and their face template will be deleted. Their past access log stays.",
-            buttons=[
-                MDFlatButton(
-                    text="Cancel",
-                    theme_text_color="Custom",
-                    text_color=self.theme_cls.primary_color,
-                    on_release=self.txt_dialog_closer,
-                ),
-                MDFlatButton(
-                    text="REMOVE",
-                    theme_text_color="Custom",
-                    text_color=theme.error,
-                    on_release=lambda inst: self._delete_access_person(person_id),
-                ),
-            ],
-        )
-
-    def _delete_access_person(self, person_id):
-        self.txt_dialog_closer()
+    def _fill_audit(self, box):
+        box.clear_widgets()
         if self.access_svc is None:
+            box.add_widget(self._placeholder_label("Audit unavailable."))
             return
-        try:
-            self.access_svc.delete_person(person_id)
-        except Exception as e:
-            print(f"Could not delete person: {e}")
-            self.show_toast_msg("Could not remove that person.", is_error=True)
+        events = self.access_svc.list_audit(24)
+        if not events:
+            box.add_widget(self._placeholder_label("No administrative changes recorded."))
             return
-        self.refresh_people()
-        self.show_toast_msg("Person removed.")
+        labels = {
+            "person_enrolled": "Person enrolled",
+            "person_updated": "Person updated",
+            "person_activated": "Person activated",
+            "person_suspended": "Person suspended",
+            "person_deleted": "Person deleted",
+            "face_enrolled": "Face template added",
+            "pin_set": "PIN set or reset",
+            "pin_revoked": "PIN revoked",
+            "card_enrolled": "Card enrolled",
+            "card_revoked": "Card revoked",
+            "card_lost": "Card marked lost",
+            "admin_auth": "Administrator verified",
+            "admin_auth_denied": "Administrator check denied",
+            "controller_error": "Door controller error",
+        }
+        for event in events:
+            who = event.get("actor_name") or "System"
+            target = event.get("person_name") or ""
+            detail = event.get("detail") or ""
+            if target and target != who:
+                detail = f"{who} -> {target}  -  {detail}"
+            elif detail:
+                detail = f"{who}  -  {detail}"
+            box.add_widget(
+                AuditEventRow(
+                    action=labels.get(event.get("action"), str(event.get("action", "")).replace("_", " ").title()),
+                    detail=detail,
+                    time_text=(event.get("ts") or "")[5:16],
+                )
+            )
 
     def export_access_log(self, instance=None):
         if self.access_svc is None:
@@ -813,14 +1265,457 @@ class FaceAiApp(MDApp):
 
     def reload_door_config(self, instance=None):
         if self.access_svc is not None:
-            self.access_svc.door.reload()
+            self.access_svc.reload_door()
             self.door = self.access_svc.door
         elif self.door is not None:
             self.door.reload()
         else:
             self.door = DoorController(self.door_config_path)
         self._sync_door_labels()
+        self._refresh_access_status()
         self.show_toast_msg("Door configuration reloaded.")
+
+    def _placeholder_label(self, text):
+        return MDLabel(
+            text=text,
+            font_size=sp(10),
+            size_hint_y=None,
+            height=dp(26),
+            theme_text_color="Custom",
+            text_color=theme.muted,
+        )
+
+    def refresh_people(self, instance=None):
+        if not self.root:
+            return
+        box = self.root.ids.people_box.ids.people_registry_box
+        box.clear_widgets()
+        if self.access_svc is None:
+            box.add_widget(self._placeholder_label("The registry is unavailable."))
+            self.people_count_text = "Registry unavailable"
+            self.people_admin_missing = True
+            return
+        self.people_admin_missing = not self.access_svc.admin_required()
+        people = self.access_svc.list_people(self.people_search, self.people_filter)
+        for person in people:
+            meta = "  ·  ".join(
+                [
+                    value
+                    for value in (
+                        person.get("external_id"),
+                        person.get("role"),
+                        person.get("department"),
+                    )
+                    if value
+                ]
+            )
+            doors = person.get("doors") or "all"
+            schedule = f"{person.get('schedule_start', '00:00')}-{person.get('schedule_end', '23:59')}"
+            meta = (meta + "  ·  " + doors + "  ·  " + schedule) if meta else f"{doors}  ·  {schedule}"
+            face = "FACE" if person.get("face_count") else "NO FACE"
+            pin_status = person.get("pin_status", "not_set")
+            pin = (
+                "PIN"
+                if pin_status == "active"
+                else ("PIN LOCKED" if pin_status == "locked" else ("PIN REVOKED" if pin_status == "revoked" else "NO PIN"))
+            )
+            cards = int(person.get("card_count") or 0)
+            creds = f"{face}  ·  {pin}  ·  {cards} CARD" + ("" if cards == 1 else "S")
+            row = PeopleRow(
+                full_name=person["full_name"],
+                meta=meta,
+                credentials=creds,
+                active=bool(person.get("active")),
+            )
+            row.manage_callback = lambda p=person: self.manage_person(p["id"])
+            box.add_widget(row)
+        if not people:
+            if self.people_search or self.people_filter != "all":
+                box.add_widget(self._placeholder_label("No people match this search or filter."))
+            else:
+                box.add_widget(self._placeholder_label("No people registered yet."))
+        count = len(people)
+        self.people_count_text = (
+            "None shown" if count == 0 else f"{count} shown"
+        )
+
+    def set_people_search(self, text):
+        if text == self.people_search:
+            return
+        self.people_search = text
+        self.refresh_people()
+
+    def set_people_filter(self, value):
+        if value not in ("all", "active", "suspended", "no_face"):
+            return
+        self.people_filter = value
+        self.refresh_people()
+
+    # -- person management ----------------------------------------
+    def manage_person(self, person_id):
+        if self.access_svc is None:
+            self.show_toast_msg("The access registry is unavailable.", is_error=True)
+            return
+        if not self.access_svc.admin_required():
+            self.show_toast_msg(
+                "Set up an administrator PIN before managing credentials.", is_error=True
+            )
+            return
+        self._require_admin(
+            "Manage person",
+            "Administrator authorization is required to edit people or their credentials.",
+            lambda actor_ref, actor_pin: self._show_person_dialog(
+                person_id, actor_ref, actor_pin
+            ),
+        )
+
+    def _show_person_dialog(self, person_id, actor_ref, actor_pin):
+        profile = self.access_svc.person_profile(person_id) if self.access_svc else None
+        if not profile:
+            self.show_toast_msg("Person not found.", is_error=True)
+            return
+        box = MDBoxLayout(
+            orientation="vertical", spacing=dp(8), size_hint_y=None, adaptive_height=True
+        )
+        header = MDLabel(
+            text=profile["full_name"],
+            font_size=sp(20),
+            bold=True,
+            size_hint_y=None,
+            height=dp(30),
+            theme_text_color="Custom",
+            text_color=theme.text,
+        )
+        box.add_widget(header)
+        status = "Active" if profile.get("active") else "Suspended"
+        detail = (
+            f"{profile.get('external_id') or 'No ID'}  ·  {profile.get('role') or 'No role'}"
+            f"  ·  {profile.get('department') or 'No department'}\n"
+            f"Doors: {profile.get('doors') or 'all'}  ·  "
+            f"Schedule: {profile.get('schedule_start', '00:00')}-{profile.get('schedule_end', '23:59')} "
+            f"days {profile.get('schedule_days', '')}\n"
+            f"Status: {status}  ·  Face templates: {profile.get('face_count', 0)}  ·  "
+            f"PIN: {profile.get('pin_status', 'not_set')}"
+        )
+        info = MDLabel(
+            text=detail,
+            font_size=sp(11),
+            size_hint_y=None,
+            height=dp(76),
+            text_size=(dp(520), None),
+            theme_text_color="Custom",
+            text_color=theme.muted,
+        )
+        box.add_widget(info)
+
+        def act(callback):
+            self.txt_dialog_closer()
+            Clock.schedule_once(lambda dt: callback(), 0.12)
+
+        actions = [
+            ("Edit details", lambda: act(lambda: self._open_person_edit(profile, actor_ref, actor_pin))),
+            ("Set / reset PIN", lambda: act(lambda: self._open_person_pin(profile, actor_ref, actor_pin))),
+            ("Enroll face", lambda: act(lambda: self._open_re_enroll_face(profile, actor_ref, actor_pin))),
+            ("Revoke PIN", lambda: act(lambda: self._revoke_person_pin(profile, actor_ref, actor_pin))),
+            ("Add card", lambda: act(lambda: self._open_person_card(profile, actor_ref, actor_pin))),
+            (
+                "Activate" if not profile.get("active") else "Suspend",
+                lambda: act(lambda: self._set_person_active(profile, not profile.get("active"), actor_ref, actor_pin)),
+            ),
+            ("Delete", lambda: act(lambda: self._confirm_person_delete(profile, actor_ref, actor_pin))),
+        ]
+        cols = 2 if self.is_wide else 1
+        rows = (len(actions) + cols - 1) // cols
+        grid = MDGridLayout(cols=cols, spacing=dp(6), size_hint_y=None)
+        grid.height = dp(38) * rows + dp(6) * max(0, rows - 1)
+        for label, callback in actions:
+            btn = MDFlatButton(
+                text=label,
+                font_size=sp(10),
+                theme_text_color="Custom",
+                text_color=theme.error if label in ("Delete", "Suspend") else theme.primary_text,
+            )
+            btn.bind(on_release=lambda inst, cb=callback: cb())
+            grid.add_widget(btn)
+        box.add_widget(grid)
+
+        cards = profile.get("cards") or []
+        box.add_widget(
+            MDLabel(
+                text="Cards",
+                font_size=sp(13),
+                bold=True,
+                size_hint_y=None,
+                height=dp(24),
+                theme_text_color="Custom",
+                text_color=theme.text,
+            )
+        )
+        if not cards:
+            box.add_widget(
+                MDLabel(
+                    text="No card credentials enrolled.",
+                    font_size=sp(10),
+                    size_hint_y=None,
+                    height=dp(24),
+                    theme_text_color="Custom",
+                    text_color=theme.muted,
+                )
+            )
+        for card in cards:
+            row = MDBoxLayout(
+                orientation="horizontal",
+                size_hint_y=None,
+                height=dp(34),
+                spacing=dp(8),
+            )
+            row.add_widget(
+                MDLabel(
+                    text=f"{card.get('card_ref', 'card')}  ·  {card.get('status', '')}  ·  {card.get('valid_until') or 'no expiry'}",
+                    font_size=sp(10),
+                    theme_text_color="Custom",
+                    text_color=theme.muted,
+                )
+            )
+            for label, lost in (("Lost", True), ("Revoke", False)):
+                btn = MDFlatButton(
+                    text=label,
+                    font_size=sp(9),
+                    theme_text_color="Custom",
+                    text_color=theme.error,
+                )
+                btn.bind(
+                    on_release=lambda inst, cid=card["id"], is_lost=lost: act(
+                        lambda: self._card_action(cid, is_lost, actor_ref, actor_pin)
+                    )
+                )
+                row.add_widget(btn)
+            box.add_widget(row)
+
+        scroll = self._form_scroll(box, max_height=380)
+        content = MDBoxLayout(orientation="vertical", size_hint_y=None, height=scroll.height)
+        content.add_widget(scroll)
+        dialog = MDDialog(
+            title="Person and credentials",
+            type="custom",
+            content_cls=content,
+            buttons=[
+                MDFlatButton(
+                    text="Close",
+                    theme_text_color="Custom",
+                    text_color=theme.muted,
+                    on_release=self.txt_dialog_closer,
+                )
+            ],
+            radius=[dp(18), dp(18), dp(18), dp(18)],
+        )
+        self.txt_dialog = dialog
+        dialog.open()
+
+    def _open_re_enroll_face(self, profile, actor_ref, actor_pin):
+        if self.access_svc is None or not self.access_svc.ready:
+            self.show_toast_msg("Start the face engine before enrolling a face.", is_error=True)
+            return
+        self.show_toast_msg("Opening the enrollment camera...")
+        self.goto_screen("accessScr")
+        Clock.schedule_once(
+            lambda dt: self._show_re_enroll_capture(profile, actor_ref, actor_pin), 1.4
+        )
+
+    def _show_re_enroll_capture(self, profile, actor_ref, actor_pin):
+        if self.current_screen != "accessScr":
+            return
+        self.show_text_dialog(
+            "Enroll another face sample",
+            f"Look straight at the live camera and capture a clear, single face for {profile['full_name']}. "
+            "Existing templates and credentials stay in place.",
+            buttons=[
+                MDFlatButton(
+                    text="Cancel",
+                    theme_text_color="Custom",
+                    text_color=theme.muted,
+                    on_release=self.txt_dialog_closer,
+                ),
+                MDFlatButton(
+                    text="CAPTURE",
+                    theme_text_color="Custom",
+                    text_color=theme.primary_text,
+                    on_release=lambda inst: self._capture_re_enroll(profile, actor_ref, actor_pin),
+                ),
+            ],
+        )
+
+    def _capture_re_enroll(self, profile, actor_ref, actor_pin):
+        self.txt_dialog_closer()
+        frame = self._capture_bgr_frame()
+        if frame is None:
+            self.show_toast_msg("The camera is not ready yet.", is_error=True)
+            return
+        result = self.access_svc.enroll_face(
+            profile["id"], frame, actor_ref=actor_ref, actor_pin=actor_pin
+        )
+        self.refresh_people()
+        if result.get("ok"):
+            self.show_toast_msg("Face template added.")
+        else:
+            self.show_toast_msg(result.get("message", "Could not enroll that face."), is_error=True)
+
+    def _open_person_edit(self, profile, actor_ref, actor_pin):
+        name = self._tf("Full name", text=profile.get("full_name", ""))
+        ext_id = self._tf("Staff / resident ID", text=profile.get("external_id", ""))
+        role = self._tf("Role", text=profile.get("role", ""))
+        dept = self._tf("Department / zone", text=profile.get("department", ""))
+        doors = self._tf("Allowed doors", text=profile.get("doors", "all"))
+        days = self._tf("Access days (0=Mon ... 6=Sun)", text=profile.get("schedule_days", "0,1,2,3,4,5,6"))
+        start = self._tf("Access start (HH:MM)", text=profile.get("schedule_start", "00:00"))
+        end = self._tf("Access end (HH:MM)", text=profile.get("schedule_end", "23:59"))
+
+        def submit(dialog):
+            if len(name.text.strip()) < 2:
+                self.show_toast_msg("Enter a full name.", is_error=True)
+                return
+            result = self.access_svc.update_person(
+                profile["id"],
+                {
+                    "full_name": name.text.strip(),
+                    "external_id": ext_id.text.strip(),
+                    "role": role.text.strip(),
+                    "department": dept.text.strip(),
+                    "doors": doors.text.strip() or "all",
+                    "schedule_days": days.text.strip() or "0,1,2,3,4,5,6",
+                    "schedule_start": start.text.strip() or "00:00",
+                    "schedule_end": end.text.strip() or "23:59",
+                },
+                actor_ref=actor_ref,
+                actor_pin=actor_pin,
+            )
+            if not result.get("ok"):
+                self.show_toast_msg(result.get("message", "Could not update person."), is_error=True)
+                return
+            dialog.dismiss()
+            self.refresh_people()
+            self.show_toast_msg("Person updated.")
+
+        self._dialog_form("Edit person", [name, ext_id, role, dept, doors, days, start, end], "SAVE", submit)
+
+    def _open_person_pin(self, profile, actor_ref, actor_pin):
+        pin = self._tf("New PIN (4-8 digits)", password=True, numeric=True)
+        confirm = self._tf("Confirm PIN", password=True, numeric=True)
+
+        def submit(dialog):
+            if not re.fullmatch(r"\d{4,8}", pin.text or ""):
+                self.show_toast_msg("PIN must be 4-8 digits.", is_error=True)
+                return
+            if pin.text != confirm.text:
+                self.show_toast_msg("PINs do not match.", is_error=True)
+                return
+            result = self.access_svc.set_pin(
+                profile["id"], pin.text, actor_ref=actor_ref, actor_pin=actor_pin
+            )
+            if not result.get("ok"):
+                self.show_toast_msg(result.get("message", "Could not set PIN."), is_error=True)
+                return
+            dialog.dismiss()
+            self.refresh_people()
+            self.show_toast_msg("PIN set.")
+
+        self._dialog_form(f"Set PIN for {profile['full_name']}", [pin, confirm], "SET PIN", submit)
+
+    def _revoke_person_pin(self, profile, actor_ref, actor_pin):
+        result = self.access_svc.revoke_pin(
+            profile["id"], actor_ref=actor_ref, actor_pin=actor_pin
+        )
+        self.refresh_people()
+        if result.get("ok"):
+            self.show_toast_msg("PIN revoked.")
+        else:
+            self.show_toast_msg(result.get("message", "Could not revoke PIN."), is_error=True)
+
+    def _open_person_card(self, profile, actor_ref, actor_pin):
+        uid = self._tf("Card UID from reader")
+        expiry = self._tf("Expiry (YYYY-MM-DD, optional)")
+        reader = self.access_svc.card_reader_status() if self.access_svc else {}
+        note = MDLabel(
+            text=reader.get("label", "No card reader connected")
+            + "\nManual UID enrollment is an administrative action; card authentication still requires a configured reader.",
+            font_size=sp(10),
+            size_hint_y=None,
+            height=dp(40),
+            text_size=(dp(480), None),
+            theme_text_color="Custom",
+            text_color=theme.muted,
+        )
+
+        def submit(dialog):
+            result = self.access_svc.assign_card(
+                profile["id"],
+                uid.text.strip(),
+                expiry.text.strip(),
+                actor_ref=actor_ref,
+                actor_pin=actor_pin,
+            )
+            if not result.get("ok"):
+                self.show_toast_msg(result.get("message", "Could not add card."), is_error=True)
+                return
+            dialog.dismiss()
+            self.refresh_people()
+            self.show_toast_msg(result.get("message", "Card enrolled."))
+
+        self._dialog_form(f"Add card for {profile['full_name']}", [note, uid, expiry], "ADD CARD", submit)
+
+    def _set_person_active(self, profile, active, actor_ref, actor_pin):
+        result = self.access_svc.set_active(
+            profile["id"], active, actor_ref=actor_ref, actor_pin=actor_pin
+        )
+        self.refresh_people()
+        if result.get("ok"):
+            self.show_toast_msg("Person activated." if active else "Person suspended.")
+        else:
+            self.show_toast_msg(result.get("message", "Could not change status."), is_error=True)
+
+    def _confirm_person_delete(self, profile, actor_ref, actor_pin):
+        self.show_text_dialog(
+            "Delete person?",
+            f"{profile['full_name']} will be deleted with their face templates, PIN and cards. "
+            "Their past access events remain in the audit log.",
+            buttons=[
+                MDFlatButton(
+                    text="Cancel",
+                    theme_text_color="Custom",
+                    text_color=theme.muted,
+                    on_release=self.txt_dialog_closer,
+                ),
+                MDFlatButton(
+                    text="DELETE",
+                    theme_text_color="Custom",
+                    text_color=theme.error,
+                    on_release=lambda inst: self._delete_person_admin(
+                        profile["id"], actor_ref, actor_pin
+                    ),
+                ),
+            ],
+        )
+
+    def _delete_person_admin(self, person_id, actor_ref, actor_pin):
+        self.txt_dialog_closer()
+        result = self.access_svc.delete_person(
+            person_id, actor_ref=actor_ref, actor_pin=actor_pin
+        )
+        self.refresh_people()
+        if result.get("ok"):
+            self.show_toast_msg("Person deleted.")
+        else:
+            self.show_toast_msg(result.get("message", "Could not delete person."), is_error=True)
+
+    def _card_action(self, card_id, lost, actor_ref, actor_pin):
+        result = self.access_svc.revoke_card(
+            card_id, actor_ref=actor_ref, actor_pin=actor_pin, lost=lost
+        )
+        self.refresh_people()
+        if result.get("ok"):
+            self.show_toast_msg(result.get("message", "Card updated."))
+        else:
+            self.show_toast_msg(result.get("message", "Could not update card."), is_error=True)
 
     def toggle_theme(self, instance=None):
         self.set_theme(not self.theme_dark)
@@ -850,6 +1745,7 @@ class FaceAiApp(MDApp):
             return
         self.refresh_people()
         self.refresh_access_events()
+        self._refresh_access_status()
         self.refresh_recent_outputs()
         self.refresh_output_count()
         if self.sec_file_box is not None:
@@ -1274,6 +2170,11 @@ class FaceAiApp(MDApp):
         if self.face_ai:
             self.services_running = True
             self.models_ready = True
+            self._refresh_access_status()
+            if self.current_screen == "accessScr":
+                card = self._access_camera_card()
+                if card is not None and self.camera is None:
+                    self._attach_camera_to_card(card)
             self.show_toast_msg("The face engine is already running")
             return
         self.models_ready = os.path.exists(self.detect_model_path) and os.path.exists(self.recog_model_path)
@@ -1296,6 +2197,11 @@ class FaceAiApp(MDApp):
                 )
                 self.door = self.access_svc.door
             self._sync_door_labels()
+            self._refresh_access_status()
+            if self.current_screen == "accessScr":
+                card = self._access_camera_card()
+                if card is not None and self.camera is None:
+                    self._attach_camera_to_card(card)
             self.show_toast_msg("Face engine started")
         except Exception as e:
             print(f"Could not start the sessions: {e}")
