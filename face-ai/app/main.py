@@ -180,7 +180,7 @@ class FaceAiApp(MDApp):
         super().__init__(**kwargs)
         Window.bind(on_keyboard=self.events)
         Window.bind(on_key_down=self._on_key_down)
-        self.logo_path = os.path.join(base_path, "data", "images", "favicon.png")
+        self.logo_path = os.path.join(base_path, "data", "brand", "faceai-logo.png")
         self.is_desktop = platform not in ("android", "ios")
         self.face_ai = None
         self.txt_dialog = None

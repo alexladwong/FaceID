@@ -1,4 +1,6 @@
 # -*- mode: python ; coding: utf-8 -*-
+import sys
+
 from PyInstaller.utils.hooks import collect_data_files, collect_submodules
 
 a = Analysis(
@@ -38,7 +40,7 @@ exe = EXE(
     a.datas,
     [],
     name='FaceAI',
-    icon='data/images/favicon.ico',
+    icon=('data/brand/faceai.icns' if sys.platform == 'darwin' else 'data/brand/faceai.ico'),
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,

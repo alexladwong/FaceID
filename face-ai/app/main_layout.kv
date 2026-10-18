@@ -61,6 +61,16 @@ MDScreen:
                             disabled: app.show_rail
                             on_release: app.open_drawer()
 
+                    Image:
+                        source: app.logo_path
+                        size_hint: None, None
+                        width: dp(22) if not app.is_wide else 0
+                        height: dp(22) if not app.is_wide else 0
+                        opacity: 1 if not app.is_wide else 0
+                        fit_mode: "contain"
+                        mipmap: True
+                        pos_hint: {"center_y": .5}
+
                     MDBoxLayout:
                         orientation: "vertical"
                         size_hint_y: None

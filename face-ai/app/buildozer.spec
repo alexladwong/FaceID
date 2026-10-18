@@ -45,10 +45,10 @@ requirements = python3, kivy==2.3.1, kivymd==1.2.0, pyjnius, android, docutils, 
 # requirements.source.kivy = ../../kivy
 
 # (str) Presplash of the application
-#presplash.filename = %(source.dir)s/data/presplash.png
+presplash.filename = %(source.dir)s/data/brand/presplash.png
 
 # (str) Icon of the application
-icon.filename = %(source.dir)s/data/images/favicon.png
+icon.filename = %(source.dir)s/data/brand/faceai-logo.png
 
 # (list) Supported orientations
 # Valid options are: landscape, portrait, portrait-reverse, landscape-reverse, or all
@@ -85,7 +85,7 @@ fullscreen = 0
 # red, blue, green, black, white, gray, cyan, magenta, yellow, lightgray,
 # darkgray, grey, lightgrey, darkgrey, aqua, fuchsia, lime, maroon, navy,
 # olive, purple, silver, teal.
-#android.presplash_color = #FFFFFF
+android.presplash_color = #0E1438
 
 # (string) Presplash animation using Lottie format.
 # see https://lottiefiles.com/ for examples and https://airbnb.design/lottie/
@@ -94,8 +94,8 @@ fullscreen = 0
 #android.presplash_lottie = "path/to/lottie/file.json"
 
 # (str) Adaptive icon of the application (used if Android API level is 26+ at runtime)
-icon.adaptive_foreground.filename = %(source.dir)s/data/images/icon_fg.png
-icon.adaptive_background.filename = %(source.dir)s/data/images/icon_bg.png
+icon.adaptive_foreground.filename = %(source.dir)s/data/brand/adaptive-foreground.png
+icon.adaptive_background.filename = %(source.dir)s/data/brand/adaptive-background.png
 
 # (list) Permissions
 # (See https://python-for-android.readthedocs.io/en/latest/buildoptions.html for all the supported syntaxes and properties)

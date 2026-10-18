@@ -64,20 +64,13 @@ Builder.load_string('''
         spacing: dp(10)
         padding: dp(2), 0
 
-        MDCard:
+        Image:
+            source: app.logo_path
             size_hint: None, None
             size: dp(36), dp(36)
-            radius: [dp(11)]
-            elevation: 0
-            md_bg_color: theme.primary
-            border_color: theme.transparent
+            fit_mode: "contain"
+            mipmap: True
             pos_hint: {"center_y": .5}
-            MDIcon:
-                icon: "face-recognition"
-                theme_text_color: "Custom"
-                text_color: theme.text_on_primary
-                font_size: sp(20)
-                pos_hint: {"center_x": .5, "center_y": .5}
 
         MDBoxLayout:
             orientation: "vertical"
@@ -273,20 +266,13 @@ Builder.load_string('''
     padding: dp(12), dp(14), dp(12), dp(10)
     spacing: dp(4)
 
-    MDCard:
+    Image:
+        source: app.logo_path
         size_hint: None, None
         size: dp(38), dp(38)
-        radius: [dp(12)]
-        elevation: 0
-        md_bg_color: theme.primary
-        border_color: theme.transparent
+        fit_mode: "contain"
+        mipmap: True
         pos_hint: {"center_x": .5}
-        MDIcon:
-            icon: "face-recognition"
-            theme_text_color: "Custom"
-            text_color: theme.text_on_primary
-            font_size: sp(20)
-            pos_hint: {"center_x": .5, "center_y": .5}
 
     MDCard:
         size_hint_y: None
