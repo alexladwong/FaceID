@@ -18,7 +18,7 @@ from screens.ui import (  # noqa: F401
 
 
 Builder.load_string('''
-#:import tokens screens.tokens
+#:import theme screens.palette.theme
 #:import parse_color kivy.parser.parse_color
 #:import AppCard screens.ui.AppCard
 #:import BusyState screens.ui.BusyState
@@ -73,7 +73,7 @@ Builder.load_string('''
         MDIcon:
             icon: "camera-outline"
             theme_text_color: "Custom"
-            text_color: tokens.PRIMARY
+            text_color: theme.primary_text
             font_size: sp(15)
             size_hint: None, None
             size: dp(18), dp(18)
@@ -83,7 +83,7 @@ Builder.load_string('''
             font_size: sp(12)
             bold: True
             theme_text_color: "Custom"
-            text_color: tokens.TEXT
+            text_color: theme.text
             valign: "middle"
             size_hint_y: None
             height: dp(24)
@@ -99,7 +99,7 @@ Builder.load_string('''
             height: dp(24)
             text_size: self.width, None
             theme_text_color: "Custom"
-            text_color: tokens.MUTED
+            text_color: theme.muted
     MDBoxLayout:
         size_hint_y: None
         height: dp(280)
@@ -127,7 +127,7 @@ Builder.load_string('''
         text: "If the preview stays black, allow camera access in System Settings -> Privacy -> Camera."
         font_size: sp(9)
         theme_text_color: "Custom"
-        text_color: tokens.MUTED
+        text_color: theme.muted
         size_hint_y: None
         height: dp(16) if app.is_desktop else 0
         opacity: 1 if app.is_desktop else 0
@@ -146,8 +146,8 @@ Builder.load_string('''
         spacing: dp(12)
         IconBadge:
             icon: "face-recognition"
-            bg: tokens.PRIMARY_SOFT
-            fg: tokens.PRIMARY
+            bg: theme.primary_soft
+            fg: theme.primary_text
             size: dp(40), dp(40)
             pos_hint: {"center_y": .5}
         MDBoxLayout:
@@ -162,13 +162,13 @@ Builder.load_string('''
                 bold: True
                 adaptive_height: True
                 theme_text_color: "Custom"
-                text_color: tokens.TEXT
+                text_color: theme.text
             MDLabel:
                 text: "No face is enrolled yet. Save one to lock the vault."
                 font_size: sp(10)
                 adaptive_height: True
                 theme_text_color: "Custom"
-                text_color: tokens.MUTED
+                text_color: theme.muted
     MDTextField:
         id: sec_name_inp_txt
         hint_text: "Your name"
@@ -202,8 +202,8 @@ Builder.load_string('''
         spacing: dp(12)
         IconBadge:
             icon: "shield-lock-outline"
-            bg: tokens.SUCCESS_SOFT
-            fg: tokens.SUCCESS
+            bg: theme.success_soft
+            fg: theme.success
             size: dp(40), dp(40)
             pos_hint: {"center_y": .5}
         MDBoxLayout:
@@ -218,13 +218,13 @@ Builder.load_string('''
                 bold: True
                 adaptive_height: True
                 theme_text_color: "Custom"
-                text_color: tokens.TEXT
+                text_color: theme.text
             MDLabel:
                 text: "Look at the camera and unlock with your face."
                 font_size: sp(10)
                 adaptive_height: True
                 theme_text_color: "Custom"
-                text_color: tokens.MUTED
+                text_color: theme.muted
     MDFillRoundFlatIconButton:
         id: sec_login_btn
         text: "Checking..." if app.verifying else "Unlock with face"
@@ -250,7 +250,7 @@ Builder.load_string('''
         size_hint_y: None
         height: dp(20)
         theme_text_color: "Custom"
-        text_color: tokens.TEXT
+        text_color: theme.text
 
     MDBoxLayout:
         size_hint_y: None
@@ -259,7 +259,7 @@ Builder.load_string('''
         MDIcon:
             icon: "check-circle-outline"
             theme_text_color: "Custom"
-            text_color: tokens.SUCCESS
+            text_color: theme.success
             font_size: sp(13)
             size_hint: None, None
             size: dp(16), dp(16)
@@ -268,7 +268,7 @@ Builder.load_string('''
             text: "Look straight at the camera"
             font_size: sp(10)
             theme_text_color: "Custom"
-            text_color: tokens.MUTED
+            text_color: theme.muted
 
     MDBoxLayout:
         size_hint_y: None
@@ -277,7 +277,7 @@ Builder.load_string('''
         MDIcon:
             icon: "check-circle-outline"
             theme_text_color: "Custom"
-            text_color: tokens.SUCCESS
+            text_color: theme.success
             font_size: sp(13)
             size_hint: None, None
             size: dp(16), dp(16)
@@ -286,7 +286,7 @@ Builder.load_string('''
             text: "Keep a single face in frame"
             font_size: sp(10)
             theme_text_color: "Custom"
-            text_color: tokens.MUTED
+            text_color: theme.muted
 
     MDBoxLayout:
         size_hint_y: None
@@ -295,7 +295,7 @@ Builder.load_string('''
         MDIcon:
             icon: "check-circle-outline"
             theme_text_color: "Custom"
-            text_color: tokens.SUCCESS
+            text_color: theme.success
             font_size: sp(13)
             size_hint: None, None
             size: dp(16), dp(16)
@@ -304,13 +304,13 @@ Builder.load_string('''
             text: "Good lighting helps matching"
             font_size: sp(10)
             theme_text_color: "Custom"
-            text_color: tokens.MUTED
+            text_color: theme.muted
 
     MDLabel:
         text: "Your face is processed on this device and never uploaded."
         font_size: sp(9)
         theme_text_color: "Custom"
-        text_color: tokens.SUCCESS
+        text_color: theme.success
         size_hint_y: None
         height: self.texture_size[1]
         text_size: self.width, None
@@ -327,7 +327,7 @@ Builder.load_string('''
         MDIcon:
             icon: "shield-check"
             theme_text_color: "Custom"
-            text_color: tokens.SUCCESS
+            text_color: theme.success
             font_size: sp(20)
             size_hint: None, None
             size: dp(24), dp(24)
@@ -341,19 +341,19 @@ Builder.load_string('''
             height: dp(28)
             text_size: self.width, None
             theme_text_color: "Custom"
-            text_color: tokens.TEXT
+            text_color: theme.text
         Widget:
         MDIconButton:
             icon: "lock-outline"
             theme_icon_color: "Custom"
-            icon_color: tokens.MUTED
+            icon_color: theme.muted
             pos_hint: {"center_y": .5}
             on_release: app.lock_vault()
         StatusPill:
             text: "Encrypted"
             icon: "lock-outline"
-            bg: tokens.SUCCESS_SOFT
-            fg: tokens.SUCCESS
+            bg: theme.success_soft
+            fg: theme.success
             pos_hint: {"center_y": .5}
 
     InfoBanner:
@@ -374,7 +374,7 @@ Builder.load_string('''
             icon: "folder-key-outline"
             font_size: sp(11)
             size_hint: None, None
-            size: dp(108), dp(38)
+            size: dp(108) if app.is_wide else dp(84), dp(38)
             on_release: app.upload_to_vault()
 
         MDFillRoundFlatIconButton:
@@ -382,12 +382,12 @@ Builder.load_string('''
             icon: "refresh"
             font_size: sp(11)
             size_hint: None, None
-            size: dp(100), dp(38)
-            md_bg_color: tokens.PRIMARY_SOFT
+            size: dp(100) if app.is_wide else dp(80), dp(38)
+            md_bg_color: theme.primary_soft
             theme_text_color: "Custom"
-            text_color: tokens.PRIMARY
+            text_color: theme.primary_text
             theme_icon_color: "Custom"
-            icon_color: tokens.PRIMARY
+            icon_color: theme.primary_text
             on_release: app.refresh_sec_file_list()
 
         MDFillRoundFlatIconButton:
@@ -395,15 +395,48 @@ Builder.load_string('''
             icon: "face-recognition"
             font_size: sp(11)
             size_hint: None, None
-            size: dp(108), dp(38)
-            md_bg_color: "#F1F3F9"
+            size: dp(108) if app.is_wide else dp(88), dp(38)
+            md_bg_color: theme.primary_soft
             theme_text_color: "Custom"
-            text_color: tokens.TEXT
+            text_color: theme.primary_text
             theme_icon_color: "Custom"
-            icon_color: tokens.TEXT
+            icon_color: theme.primary_text
             on_release: app.add_new_face()
 
         Widget:
+        MDLabel:
+            text: app.vault_count_text
+            font_size: sp(9)
+            size_hint_x: None
+            width: dp(104) if app.is_wide else 0
+            opacity: 1 if app.is_wide else 0
+            halign: "right"
+            theme_text_color: "Custom"
+            text_color: theme.muted
+            pos_hint: {"center_y": .5}
+
+    MDBoxLayout:
+        size_hint_y: None
+        height: dp(38)
+        spacing: dp(8)
+        MDTextField:
+            id: sec_search
+            text: app.vault_search
+            hint_text: "Search the vault"
+            mode: "rectangle"
+            font_size: sp(11)
+            size_hint_y: None
+            height: dp(38)
+            on_text: app.set_vault_search(self.text)
+        MDTextButton:
+            id: sec_sort
+            text: app.vault_sort_label
+            font_size: sp(10)
+            size_hint_x: None
+            width: dp(86)
+            theme_text_color: "Custom"
+            text_color: theme.primary_text
+            on_release: app.toggle_vault_sort()
 
     MDCard:
         orientation: "vertical"
@@ -411,8 +444,8 @@ Builder.load_string('''
         radius: [dp(16)]
         elevation: 0
         padding: dp(6)
-        md_bg_color: "#FBFCFE"
-        border_color: tokens.LINE
+        md_bg_color: theme.card
+        border_color: theme.line
 
         MDScrollView:
             id: sec_file_scroll
@@ -482,7 +515,7 @@ class CameraCard(AppCard):
             MDIcon(
                 icon="camera-off-outline",
                 theme_text_color="Custom",
-                text_color="#94A3B8",
+                text_color=theme.muted,
                 font_size=sp(34),
                 size_hint_y=None,
                 height=dp(40),
@@ -495,7 +528,7 @@ class CameraCard(AppCard):
                 halign="center",
                 font_size=sp(10),
                 theme_text_color="Custom",
-                text_color="#94A3B8",
+                text_color=theme.muted,
                 size_hint_y=None,
                 height=dp(30),
                 text_size=(dp(220), None),

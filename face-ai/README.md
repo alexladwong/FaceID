@@ -8,7 +8,12 @@ We will use Face Detection, Face Recognition and some other related offline AI t
 ### 🤔 Why would you choose our app? (Features)
 👉 Offline Face Detection and Recognition. <br>
 👉 Store secret files which can only be unlocked by your face. On `non-android` platform, files will be encrypted. <br>
+👉 Local door-access pilot with a people registry, audit log and simulated/webhook controller. <br>
+👉 Light and dark themes, a collapsible desktop rail, a mobile drawer and responsive layouts from 360 px phones to large desktops. <br>
 👉 Cross-platform and Open Source. <br>
+
+The interface and its design tokens are documented in
+[`docs/UI_GUIDE.md`](docs/UI_GUIDE.md).
 
 ## 💰 Sponsor Me
 You can buy me a coffee via [this link](https://www.paypal.com/paypalme/soomnathsdas) or tap on below image. Thank you 🙏. <br>

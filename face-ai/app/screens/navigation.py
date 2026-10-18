@@ -23,19 +23,20 @@ class NavItem(MDNavigationDrawerItem):
 
 
 Builder.load_string('''
-#:import tokens screens.tokens
+#:import theme screens.palette.theme
 
 <NavItem>:
     radius: [dp(12)]
     focus_color: 0.31, 0.27, 0.9, 0.10
     ripple_color: 0.31, 0.27, 0.9, 0.06
-    text_color: tokens.TEXT
-    icon_color: tokens.MUTED
-    selected_color: tokens.PRIMARY
+    text_color: theme.text
+    icon_color: theme.muted
+    selected_color: theme.primary_text
 
 
 <NavigationMenu>:
     orientation: "vertical"
+    on_pos: self.do_layout()
     padding: dp(10), dp(12), dp(10), dp(10)
     spacing: dp(2)
 
@@ -46,7 +47,7 @@ Builder.load_string('''
         size_hint_y: None
         height: dp(30)
         theme_text_color: "Custom"
-        text_color: tokens.MUTED
+        text_color: theme.muted
 
     NavItem:
         icon: "view-dashboard-outline"
@@ -89,31 +90,10 @@ Builder.load_string('''
         spacing: dp(8)
 
         MDIcon:
-            icon: "circle"
-            font_size: sp(8)
-            theme_text_color: "Custom"
-            text_color: tokens.SUCCESS if app.services_running else tokens.MUTED
-            size_hint: None, None
-            size: dp(12), dp(12)
-            pos_hint: {"center_y": .5}
-        MDLabel:
-            text: "Engine running" if app.services_running else "Engine stopped"
-            font_size: sp(10)
-            theme_text_color: "Custom"
-            text_color: tokens.MUTED
-
-    MDBoxLayout:
-        orientation: "horizontal"
-        size_hint_y: None
-        height: dp(30)
-        padding: dp(10), 0
-        spacing: dp(8)
-
-        MDIcon:
             icon: "shield-check-outline"
             font_size: sp(12)
             theme_text_color: "Custom"
-            text_color: tokens.SUCCESS
+            text_color: theme.success
             size_hint: None, None
             size: dp(14), dp(14)
             pos_hint: {"center_y": .5}
@@ -121,7 +101,7 @@ Builder.load_string('''
             text: "Nothing leaves this device"
             font_size: sp(9)
             theme_text_color: "Custom"
-            text_color: tokens.MUTED
+            text_color: theme.muted
 
     MDLabel:
         text: "Face AI  -  v" + app.app_version
@@ -129,7 +109,7 @@ Builder.load_string('''
         size_hint_y: None
         height: dp(26)
         theme_text_color: "Custom"
-        text_color: tokens.MUTED
+        text_color: theme.muted
 ''')
 
 
@@ -137,3 +117,84 @@ class NavigationMenu(MDBoxLayout):
     """Shared menu body for the desktop rail and the mobile drawer."""
 
     screen_manager = ObjectProperty(None)
+
+Builder.load_string('''
+#:import theme screens.palette.theme
+#:import TooltipMDIconButton screens.ui.TooltipMDIconButton
+
+
+<CompactNav>:
+    orientation: "vertical"
+    on_pos: self.do_layout()
+    padding: dp(8), dp(10), dp(8), dp(8)
+    spacing: dp(4)
+
+    TooltipMDIconButton:
+        tooltip_text: "Home"
+        icon: "view-dashboard-outline"
+        theme_icon_color: "Custom"
+        icon_color: theme.primary_text if app.current_screen == "initScreen" else theme.muted
+        md_bg_color: theme.primary_soft if app.current_screen == "initScreen" else theme.transparent
+        pos_hint: {"center_x": .5}
+        on_release: app.goto_screen("initScreen")
+
+    TooltipMDIconButton:
+        tooltip_text: "Access"
+        icon: "door-open"
+        theme_icon_color: "Custom"
+        icon_color: theme.primary_text if app.current_screen == "accessScr" else theme.muted
+        md_bg_color: theme.primary_soft if app.current_screen == "accessScr" else theme.transparent
+        pos_hint: {"center_x": .5}
+        on_release: app.goto_screen("accessScr")
+
+    TooltipMDIconButton:
+        tooltip_text: "People"
+        icon: "account-group-outline"
+        theme_icon_color: "Custom"
+        icon_color: theme.primary_text if app.current_screen == "peopleScr" else theme.muted
+        md_bg_color: theme.primary_soft if app.current_screen == "peopleScr" else theme.transparent
+        pos_hint: {"center_x": .5}
+        on_release: app.goto_screen("peopleScr")
+
+    TooltipMDIconButton:
+        tooltip_text: "Face Finder"
+        icon: "account-search-outline"
+        theme_icon_color: "Custom"
+        icon_color: theme.primary_text if app.current_screen == "faceFindScr" else theme.muted
+        md_bg_color: theme.primary_soft if app.current_screen == "faceFindScr" else theme.transparent
+        pos_hint: {"center_x": .5}
+        on_release: app.goto_screen("faceFindScr")
+
+    TooltipMDIconButton:
+        tooltip_text: "Secure Vault"
+        icon: "shield-lock-outline"
+        theme_icon_color: "Custom"
+        icon_color: theme.primary_text if app.current_screen == "securityScr" else theme.muted
+        md_bg_color: theme.primary_soft if app.current_screen == "securityScr" else theme.transparent
+        pos_hint: {"center_x": .5}
+        on_release: app.goto_screen("securityScr")
+
+    TooltipMDIconButton:
+        tooltip_text: "Settings"
+        icon: "tune-variant"
+        theme_icon_color: "Custom"
+        icon_color: theme.primary_text if app.current_screen == "settingsScr" else theme.muted
+        md_bg_color: theme.primary_soft if app.current_screen == "settingsScr" else theme.transparent
+        pos_hint: {"center_x": .5}
+        on_release: app.goto_screen("settingsScr")
+
+    Widget:
+
+    MDIcon:
+        icon: "shield-check-outline"
+        theme_text_color: "Custom"
+        text_color: theme.success
+        font_size: sp(16)
+        size_hint: None, None
+        size: dp(20), dp(20)
+        pos_hint: {"center_x": .5}
+''')
+
+
+class CompactNav(MDBoxLayout):
+    pass

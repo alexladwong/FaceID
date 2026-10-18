@@ -35,7 +35,7 @@ from plyer import filechooser #, camera as pl_cam
 # local imports
 from services.access import AccessSvc, DoorController
 from services.faceAi import FaceAiSvc
-from screens import tokens
+from screens.palette import theme
 from screens.face_match import FaceMatchBox
 from screens.init_screen import InitBox
 from screens.security import (
@@ -109,6 +109,8 @@ class FaceAiApp(MDApp):
     download_progress_value = NumericProperty(0)
     download_status_text = StringProperty("")
     is_onnx_running = BooleanProperty(False)
+    match_step_text = StringProperty("1/4  -  Source face")
+    match_has_results = BooleanProperty(False)
     verifying = BooleanProperty(False)
     face_tip_visible = BooleanProperty(True)
     vault_tip_visible = BooleanProperty(True)
@@ -116,6 +118,8 @@ class FaceAiApp(MDApp):
     is_desktop = BooleanProperty(False)
     is_wide = BooleanProperty(False)
     nav_offset = NumericProperty(dp(232))
+    nav_collapsed = BooleanProperty(False)
+    current_screen = StringProperty("initScreen")
     home_action_label = StringProperty("Start face engine")
     home_action_icon = StringProperty("play")
     app_version = StringProperty(__version__)
@@ -129,9 +133,17 @@ class FaceAiApp(MDApp):
     access_detail1 = StringProperty("")
     access_detail2 = StringProperty("")
     access_busy = BooleanProperty(False)
+    theme_dark = BooleanProperty(False)
+    theme_label = StringProperty("Light")
+    reduce_motion = BooleanProperty(False)
+    motion_label = StringProperty("Off")
     door_name = StringProperty("Main Gate")
     door_controller_label = StringProperty("Simulated relay (pilot)")
     people_count_text = StringProperty("No people registered")
+    vault_search = StringProperty("")
+    vault_sort = StringProperty("date")
+    vault_sort_label = StringProperty("Newest")
+    vault_count_text = StringProperty("")
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -160,9 +172,12 @@ class FaceAiApp(MDApp):
         self.tmp_login_name = ""
         self.new_face_req = False
         self.img_purpose = ""
+        self._match_token = 0
         self.user_preferences = {
             "fm_dont_again": False,
-            "sec_dont_again": False
+            "sec_dont_again": False,
+            "dark": False,
+            "reduce_motion": False
         }
         self.is_wide = Window.width >= 980
         self._drawer_open = False
@@ -170,16 +185,32 @@ class FaceAiApp(MDApp):
         self.access_svc = None
         self.door = None
         Window.bind(on_resize=self._on_window_resize)
+        if platform not in ("android", "ios") and hasattr(Window, "on_drop_file"):
+            try:
+                Window.bind(on_drop_file=self._on_file_drop_file)
+            except Exception as e:
+                print(f"Drag and drop is unavailable: {e}")
         self.bind(
             models_ready=self._update_home_action,
             services_running=self._update_home_action,
             download_active=self._update_home_action,
         )
 
+    def _read_saved_theme(self):
+        try:
+            path = os.path.join(self.user_data_dir, "config", "preferences.json")
+            with open(path) as f:
+                return bool(json.load(f).get("dark", False))
+        except Exception:
+            return False
+
     def build(self):
+        self.theme_dark = self._read_saved_theme()
+        self.theme_label = "Dark" if self.theme_dark else "Light"
+        theme.apply("dark" if self.theme_dark else "light")
         self.theme_cls.primary_palette = "Indigo"
         self.theme_cls.accent_palette = "Teal"
-        self.theme_cls.theme_style = "Light"
+        self.theme_cls.theme_style = "Dark" if self.theme_dark else "Light"
         self.title = "Face AI"
         try:
             self.icon = self.logo_path
@@ -187,7 +218,7 @@ class FaceAiApp(MDApp):
             pass
         if self.is_desktop:
             Window.size = self.initial_window_size
-            Window.clearcolor = get_color_from_hex(tokens.SURFACE)
+            Window.clearcolor = get_color_from_hex(theme.surface)
         self.is_wide = Window.width >= 980
         return Builder.load_file(kv_file_path)
 
@@ -208,8 +239,12 @@ class FaceAiApp(MDApp):
         scrim = ids.get("drawer_scrim")
         if panel is None:
             return
+        Animation.cancel_all(panel)
+        if scrim is not None:
+            Animation.cancel_all(scrim)
         if self.is_wide:
-            self.nav_offset = dp(232)
+            panel.width = dp(76) if self.nav_collapsed else dp(232)
+            self.nav_offset = panel.width
             panel.x = 0
             panel.disabled = False
             self._drawer_open = False
@@ -217,10 +252,38 @@ class FaceAiApp(MDApp):
                 scrim.opacity = 0
                 scrim.disabled = True
         else:
+            panel.width = dp(232)
             self.nav_offset = 0
             panel.disabled = False
             if not self._drawer_open:
                 panel.x = -panel.width
+                # The kv width binding settles after this resize event; pin
+                # the closed position to the final width so the rail cannot
+                # peek over the content on narrow windows.
+                Clock.schedule_once(
+                    lambda dt: setattr(panel, "x", -panel.width), 0
+                )
+
+    def toggle_reduce_motion(self, instance=None):
+        self.reduce_motion = not self.reduce_motion
+        self.motion_label = "On" if self.reduce_motion else "Off"
+        self.user_preferences["reduce_motion"] = self.reduce_motion
+        self.save_config_file(self.user_preferences, self.usr_pref_path)
+        try:
+            self.root.ids.screen_manager.transition.duration = (
+                0 if self.reduce_motion else 0.14
+            )
+        except Exception:
+            pass
+        self.show_toast_msg(
+            "Motion reduced." if self.reduce_motion else "Motion animations restored."
+        )
+
+    def toggle_nav_collapse(self, instance=None):
+        if not self.is_wide:
+            return
+        self.nav_collapsed = not self.nav_collapsed
+        self._apply_nav_mode()
 
     def open_drawer(self, instance=None):
         if self.is_wide or not self.root:
@@ -230,8 +293,12 @@ class FaceAiApp(MDApp):
         self._drawer_open = True
         panel.x = -panel.width
         scrim.disabled = False
-        Animation(x=0, d=.18, t="out_quad").start(panel)
-        Animation(opacity=1, d=.16).start(scrim)
+        if self.reduce_motion:
+            panel.x = 0
+            scrim.opacity = 1
+        else:
+            Animation(x=0, d=.18, t="out_quad").start(panel)
+            Animation(opacity=1, d=.16).start(scrim)
 
     def close_drawer(self, instance=None):
         if not self.root:
@@ -242,6 +309,21 @@ class FaceAiApp(MDApp):
             return
         was_open = self._drawer_open
         self._drawer_open = False
+        if self.is_wide:
+            Animation.cancel_all(panel)
+            panel.x = 0
+            if scrim is not None:
+                scrim.opacity = 0
+                scrim.disabled = True
+            return
+        if self.reduce_motion:
+            panel.x = -panel.width
+            if scrim is not None:
+                scrim.opacity = 0
+                scrim.disabled = True
+            if not was_open:
+                panel.x = -panel.width
+            return
         Animation(x=-panel.width, d=.16, t="in_quad").start(panel)
         if scrim is not None:
             Animation(opacity=0, d=.16).start(scrim)
@@ -282,9 +364,17 @@ class FaceAiApp(MDApp):
             self.goto_screen("faceFindScr")
 
     def _on_key_down(self, window, key, scancode, codepoint, modifiers):
-        if self._drawer_open and key == 27:
-            self.close_drawer()
-            return True
+        if key == 27:
+            if self._drawer_open:
+                self.close_drawer()
+                return True
+            dialog = getattr(self, "txt_dialog", None)
+            if dialog is not None:
+                try:
+                    dialog.dismiss()
+                except Exception:
+                    pass
+                return True
         meta = "meta" in modifiers or "ctrl" in modifiers
         if not meta:
             return False
@@ -315,7 +405,14 @@ class FaceAiApp(MDApp):
         return False
 
     def goto_screen(self, name):
+        try:
+            self.root.ids.screen_manager.transition.duration = (
+                0 if self.reduce_motion else 0.14
+            )
+        except Exception:
+            pass
         self.root.ids.screen_manager.current = name
+        self.current_screen = name
         self._set_nav_selection(name)
         if self._drawer_open:
             self.close_drawer()
@@ -578,7 +675,7 @@ class FaceAiApp(MDApp):
             size_hint_y=None,
             height=dp(26),
             theme_text_color="Custom",
-            text_color=tokens.MUTED,
+            text_color=theme.muted,
         )
 
     def refresh_people(self, instance=None):
@@ -658,7 +755,7 @@ class FaceAiApp(MDApp):
                 MDFlatButton(
                     text="REMOVE",
                     theme_text_color="Custom",
-                    text_color=tokens.ERROR,
+                    text_color=theme.error,
                     on_release=lambda inst: self._delete_access_person(person_id),
                 ),
             ],
@@ -706,6 +803,40 @@ class FaceAiApp(MDApp):
             self.door = DoorController(self.door_config_path)
         self._sync_door_labels()
         self.show_toast_msg("Door configuration reloaded.")
+
+    def toggle_theme(self, instance=None):
+        self.set_theme(not self.theme_dark)
+
+    def set_theme(self, dark):
+        dark = bool(dark)
+        self.theme_dark = dark
+        self.theme_label = "Dark" if dark else "Light"
+        theme.apply("dark" if dark else "light")
+        try:
+            self.theme_cls.theme_style = "Dark" if dark else "Light"
+        except Exception as e:
+            print(f"Could not switch the material theme: {e}")
+        Window.clearcolor = get_color_from_hex(theme.surface)
+        try:
+            self.root.canvas.ask_update()
+            Window.canvas.ask_update()
+        except Exception:
+            pass
+        self.user_preferences["dark"] = dark
+        if os.path.exists(self.usr_pref_path):
+            self.save_config_file(self.user_preferences, self.usr_pref_path)
+        Clock.schedule_once(lambda dt: self._refresh_after_theme(), .05)
+
+    def _refresh_after_theme(self):
+        if not self.root:
+            return
+        self.refresh_people()
+        self.refresh_access_events()
+        self.refresh_recent_outputs()
+        self.refresh_output_count()
+        if self.sec_file_box is not None:
+            self.refresh_sec_file_list()
+        self.reset_access_result()
 
     def on_start(self):
         # paths setup
@@ -803,8 +934,13 @@ class FaceAiApp(MDApp):
         else:
             with open(self.usr_pref_path, "w") as pf:
                 json.dump(self.user_preferences, pf)
+        self.user_preferences["dark"] = old_pref.get("dark", self.theme_dark)
+        self.reduce_motion = bool(old_pref.get("reduce_motion", False))
+        self.motion_label = "On" if self.reduce_motion else "Off"
         self.face_tip_visible = not self.user_preferences["fm_dont_again"]
         self.vault_tip_visible = not self.user_preferences["sec_dont_again"]
+        if bool(self.user_preferences["dark"]) != self.theme_dark:
+            self.set_theme(bool(self.user_preferences["dark"]))
         # set encryption key for non android
         if self.encrypt_key:
             if not os.path.exists(self.encrypt_key):
@@ -939,6 +1075,10 @@ class FaceAiApp(MDApp):
         from kivymd.uix.label import MDIcon
         from kivy.animation import Animation
 
+        if is_error:
+            duration = max(duration, 6)
+        lines = max(1, len(str(message)) // 52 + 1)
+
         previous = getattr(self, "_toast", None)
         if previous is not None and previous.parent:
             previous.parent.remove_widget(previous)
@@ -946,12 +1086,12 @@ class FaceAiApp(MDApp):
             orientation="horizontal",
             size_hint=(None, None),
             width=min(Window.width - dp(32), dp(430)),
-            height=dp(46),
+            height=dp(46) if lines == 1 else dp(62),
             padding=(dp(14), 0),
             spacing=dp(10),
             radius=[dp(14)],
             elevation=3,
-            md_bg_color=get_color_from_hex(tokens.ERROR if is_error else "#1F2937"),
+            md_bg_color=get_color_from_hex(theme.error if is_error else "#1F2937"),
         )
         toast.add_widget(
             MDIcon(
@@ -972,18 +1112,31 @@ class FaceAiApp(MDApp):
                 text_color="#FFFFFF",
                 text_size=(toast.width - dp(70), None),
                 valign="middle",
+                height=toast.height - dp(8),
                 pos_hint={"center_y": 0.5},
             )
         )
         Window.add_widget(toast)
         toast.pos = (Window.width / 2 - toast.width / 2, dp(24))
-        toast.opacity = 0
-        Animation(opacity=1, d=0.15).start(toast)
+        toast.opacity = 0 if not self.reduce_motion else 1
+        if not self.reduce_motion:
+            Animation(opacity=1, d=0.15).start(toast)
         self._toast = toast
 
         def dismiss():
+            # Drop the elevation before fading: KivyMD's shadow is a separate
+            # canvas layer and can outlive an opacity animation.
+            toast.elevation = 0
+            if self.reduce_motion:
+                if toast.parent:
+                    toast.parent.remove_widget(toast)
+                return
             anim = Animation(opacity=0, d=0.2)
-            anim.bind(on_complete=lambda *a: Window.remove_widget(toast) if toast.parent else None)
+            anim.bind(
+                on_complete=lambda *a: (
+                    toast.parent.remove_widget(toast) if toast.parent else None
+                )
+            )
             anim.start(toast)
 
         Clock.schedule_once(lambda dt: dismiss(), duration)
@@ -1204,9 +1357,48 @@ class FaceAiApp(MDApp):
     def reset_result_panes(self):
         self._refresh_result_placeholders()
 
+    def update_match_step(self):
+        if self.is_onnx_running:
+            self.match_step_text = "3/4  -  Matching..."
+        elif self.match_has_results:
+            self.match_step_text = "4/4  -  Inspect results"
+        elif self.src_image_path and self.trgt_image_path:
+            self.match_step_text = "3/4  -  Run match"
+        elif self.src_image_path:
+            self.match_step_text = "2/4  -  Add target"
+        else:
+            self.match_step_text = "1/4  -  Source face"
+
     def update_ready_to_match(self):
         self.ready_to_match = bool(self.src_image_path and self.trgt_image_path)
         self._refresh_result_placeholders()
+        self.update_match_step()
+
+    def cancel_face_match(self, instance=None):
+        if not self.is_onnx_running:
+            return
+        self._match_token += 1
+        self.is_onnx_running = False
+        self.match_has_results = False
+        self._refresh_result_placeholders()
+        self.update_match_step()
+        self.show_toast_msg("Match cancelled.")
+
+    def _on_file_drop_file(self, window, file_path, x, y):
+        if not self.root or self.root.ids.screen_manager.current != "faceFindScr":
+            return
+        try:
+            if isinstance(file_path, bytes):
+                file_path = file_path.decode("utf-8")
+        except Exception:
+            return
+        if not str(file_path).lower().endswith((".jpg", ".jpeg", ".png", ".webp")):
+            self.show_toast_msg("Drop a JPG, PNG or WEBP image.", is_error=True)
+            return
+        self.img_purpose = "src" if not self.src_image_path else "trgt"
+        if self.select_img_path(str(file_path)):
+            which = "source" if self.img_purpose == "src" else "target"
+            self.show_toast_msg(f"Dropped image added to the {which}.")
 
     @staticmethod
     def _clean_markup(message: str) -> str:
@@ -1267,10 +1459,12 @@ class FaceAiApp(MDApp):
             self.trgt_image_path = path
         else:
             self.show_toast_msg("Choose the source or the target image first.")
-            return
+            return False
         tile.image_source = path
         tile.file_name = os.path.basename(path)
+        self.match_has_results = False
         self.update_ready_to_match()
+        return True
 
     def submit_face_match(self, instance=None):
         """
@@ -1290,7 +1484,7 @@ class FaceAiApp(MDApp):
                     MDFlatButton(
                         text="START",
                         theme_text_color="Custom",
-                        text_color=tokens.SUCCESS,
+                        text_color=theme.success,
                         on_release=self.start_face_services,
                     ),
                 ],
@@ -1302,38 +1496,47 @@ class FaceAiApp(MDApp):
         if not self.src_image_path or not self.trgt_image_path:
             self.show_toast_msg("Choose both a source and a target image.", is_error=True)
             return
+        self._match_token += 1
+        token = self._match_token
+        self.match_has_results = False
         self.is_onnx_running = True
+        self.update_match_step()
         self._show_matching_state()
         Thread(
             target=self._run_face_match,
-            args=(self.src_image_path, self.trgt_image_path),
+            args=(self.src_image_path, self.trgt_image_path, token),
             daemon=True,
         ).start()
 
-    def _run_face_match(self, img1_path, img2_path):
+    def _run_face_match(self, img1_path, img2_path, token):
         """Run the comparison, guaranteeing the UI leaves its busy state."""
+        def deliver(resp):
+            Clock.schedule_once(lambda dt: self.face_match_callback(resp, token))
+
         try:
             self.face_ai.face_match_group(
                 img1_path=img1_path,
                 img2_path=img2_path,
-                callback=self.face_match_callback,
+                callback=deliver,
             )
         except Exception as e:
             print(f"Face match failed: {e}")
-            Clock.schedule_once(
-                lambda dt: self.face_match_callback(
-                    {
-                        "stat": False,
-                        "msg": "Something went wrong while matching. Please try again.",
-                        "src": "",
-                        "trgt": "",
-                    }
-                )
+            deliver(
+                {
+                    "stat": False,
+                    "msg": "Something went wrong while matching. Please try again.",
+                    "src": "",
+                    "trgt": "",
+                }
             )
 
-    def face_match_callback(self, resp):
+    def face_match_callback(self, resp, token=None):
+        if token is not None and token != self._match_token:
+            return
         self.is_onnx_running = False
         if not resp or not resp.get("stat"):
+            self.match_has_results = False
+            self.update_match_step()
             message = self._clean_markup((resp or {}).get("msg", ""))
             if not message:
                 message = "No faces could be compared. Try clearer photos."
@@ -1348,6 +1551,8 @@ class FaceAiApp(MDApp):
             box = self._result_box(which)
             box.clear_widgets()
             box.add_widget(image)
+        self.match_has_results = True
+        self.update_match_step()
         self.refresh_output_count()
         self.refresh_recent_outputs()
         self.show_toast_msg("Match complete. Tap a result to save or delete it.")
@@ -1370,13 +1575,13 @@ class FaceAiApp(MDApp):
                     MDFlatButton(
                         text="DELETE",
                         theme_text_color="Custom",
-                        text_color=tokens.ERROR,
+                        text_color=theme.error,
                         on_release=self.delete_selected_file
                     ),
                     MDFlatButton(
                         text="Save",
                         theme_text_color="Custom",
-                        text_color=tokens.SUCCESS,
+                        text_color=theme.success,
                         on_release=self.download_from_app_local
                     ),
                 ],
@@ -1449,7 +1654,7 @@ class FaceAiApp(MDApp):
                 MDFlatButton(
                     text="DELETE",
                     theme_text_color="Custom",
-                    text_color=tokens.ERROR,
+                    text_color=theme.error,
                     on_release=self.delete_selected_file
                 ),
             ],
@@ -1474,6 +1679,9 @@ class FaceAiApp(MDApp):
                 self.show_toast_msg("Could not delete the file.", is_error=True)
 
     def reset_face_matcher(self, instance=None):
+        self._match_token += 1
+        self.is_onnx_running = False
+        self.match_has_results = False
         self.src_image_path = None
         self.trgt_image_path = None
         self.img_purpose = ""
@@ -1483,6 +1691,7 @@ class FaceAiApp(MDApp):
             tile.image_source = ""
             tile.file_name = ""
         self.update_ready_to_match()
+        self.update_match_step()
 
     # Security section starts here
     def on_security_enter(self):
@@ -1492,6 +1701,7 @@ class FaceAiApp(MDApp):
         if not self.face_ai or not self.services_running:
             self.show_toast_msg("Start the face engine first.", is_error=True, duration=2)
             self.root.ids.screen_manager.current = "initScreen"
+            self.current_screen = "initScreen"
             return
         self.verifying = False
         self.on_security_leave()  # clear existing things
@@ -1758,30 +1968,65 @@ class FaceAiApp(MDApp):
             empty.opacity = 0
             empty.disabled = True
 
+    def set_vault_search(self, text):
+        if text == self.vault_search:
+            return
+        self.vault_search = text
+        self.refresh_sec_file_list()
+
+    def toggle_vault_sort(self, instance=None):
+        self.vault_sort = "name" if self.vault_sort == "date" else "date"
+        self.vault_sort_label = "Newest" if self.vault_sort == "date" else "Name A-Z"
+        self.refresh_sec_file_list()
+
     def refresh_sec_file_list(self, instance=None):
         if not self.sec_file_box:
             return
         secMdList = self.sec_file_box.ids.sec_file_list
         secMdList.clear_widgets()
-        sec_files = self.get_sec_file_list(self.sec_file_dir)
-        for file in sec_files:
-            fileElem = SecSingleFile()
-            fileElem.filename = str(file)
+        files = []
+        for name in self.get_sec_file_list(self.sec_file_dir):
+            full_path = os.path.join(self.sec_file_dir, name)
             try:
-                full_path = os.path.join(self.sec_file_dir, file)
-                size = os.path.getsize(full_path)
                 stamp = os.path.getmtime(full_path)
-                size_txt = (
-                    f"{size / 1024:.0f} KB"
-                    if size < 1024 * 1024
-                    else f"{size / (1024 * 1024):.1f} MB"
-                )
-                date_txt = datetime.datetime.fromtimestamp(stamp).strftime("%d %b %Y")
-                fileElem.detail = f"Encrypted - {size_txt} - {date_txt}"
+                size = os.path.getsize(full_path)
             except OSError:
+                stamp, size = 0, 0
+            files.append({"name": str(name), "stamp": stamp, "size": size})
+        query = self.vault_search.strip().lower()
+        if query:
+            files = [f for f in files if query in f["name"].lower()]
+        if self.vault_sort == "name":
+            files.sort(key=lambda f: f["name"].lower())
+        else:
+            files.sort(key=lambda f: f["stamp"], reverse=True)
+        for info in files:
+            fileElem = SecSingleFile()
+            fileElem.filename = info["name"]
+            size = info["size"]
+            size_txt = (
+                f"{size / 1024:.0f} KB"
+                if size < 1024 * 1024
+                else f"{size / (1024 * 1024):.1f} MB"
+            )
+            if info["stamp"]:
+                date_txt = datetime.datetime.fromtimestamp(info["stamp"]).strftime("%d %b %Y")
+                fileElem.detail = f"Encrypted - {size_txt} - {date_txt}"
+            else:
                 fileElem.detail = "Encrypted - tap to download"
             secMdList.add_widget(fileElem)
-        self._toggle_vault_empty(len(sec_files) == 0)
+        count = len(files)
+        self.vault_count_text = (
+            "0 files" if count == 0 else f"{count} encrypted file" + ("" if count == 1 else "s")
+        )
+        empty = self.sec_file_box.ids.sec_empty
+        if query and not files:
+            empty.text = "No matching files"
+            empty.detail = "Try a different search."
+        else:
+            empty.text = "No files yet"
+            empty.detail = "Upload a file to keep it encrypted on this device."
+        self._toggle_vault_empty(count == 0)
 
     def sec_login_ok(self, msg: str = "Login"):
         self.on_security_leave()
@@ -1946,7 +2191,7 @@ class FaceAiApp(MDApp):
                 MDFlatButton(
                     text="DELETE",
                     theme_text_color="Custom",
-                    text_color=tokens.ERROR,
+                    text_color=theme.error,
                     on_release=self.delete_selected_file,
                 ),
             ],
@@ -1956,6 +2201,8 @@ class FaceAiApp(MDApp):
         if self.camera:
             print("Camera has been stopped")
         self.stop_camera()
+        # Leaving the vault re-locks it; face auth is required on re-entry.
+        self.login_success = False
         if self.sec_uix:
             self.sec_uix.clear_widgets()
 
@@ -1995,7 +2242,7 @@ class FaceAiApp(MDApp):
                 MDFlatButton(
                     text="DELETE",
                     theme_text_color="Custom",
-                    text_color=tokens.ERROR,
+                    text_color=theme.error,
                     on_release=self.delete_all_op_action,
                 ),
             ],
@@ -2074,7 +2321,7 @@ class FaceAiApp(MDApp):
             MDFlatButton(
                 text="Releases",
                 theme_text_color="Custom",
-                text_color=tokens.PRIMARY,
+                text_color=theme.primary_text,
                 on_release=self.update_link_open
             ),
         ]

@@ -10,7 +10,7 @@ from screens.ui import AppCard, IconBadge, StatusPill  # noqa: F401
 
 
 Builder.load_string('''
-#:import tokens screens.tokens
+#:import theme screens.palette.theme
 #:import AppCard screens.ui.AppCard
 #:import IconBadge screens.ui.IconBadge
 #:import StatusPill screens.ui.StatusPill
@@ -25,8 +25,8 @@ Builder.load_string('''
 
     IconBadge:
         icon: "account"
-        bg: tokens.PRIMARY_SOFT
-        fg: tokens.PRIMARY
+        bg: theme.primary_soft
+        fg: theme.primary_text
         size: dp(36), dp(36)
         pos_hint: {"center_y": .5}
 
@@ -41,12 +41,12 @@ Builder.load_string('''
             font_size: sp(12)
             bold: True
             theme_text_color: "Custom"
-            text_color: tokens.TEXT
+            text_color: theme.text
         MDLabel:
             text: root.meta
             font_size: sp(9)
             theme_text_color: "Custom"
-            text_color: tokens.MUTED
+            text_color: theme.muted
             shorten: True
             shorten_from: "right"
             text_size: self.width, None
@@ -56,14 +56,18 @@ Builder.load_string('''
     StatusPill:
         text: "Active" if root.active else "Inactive"
         icon: "check-circle-outline" if root.active else "minus-circle-outline"
-        bg: tokens.SUCCESS_SOFT if root.active else "#F1F3F9"
-        fg: tokens.SUCCESS if root.active else tokens.MUTED
+        bg: theme.success_soft if root.active else theme.surface
+        fg: theme.success if root.active else theme.muted
+        opacity: 1 if app.is_wide else 0
+        disabled: not app.is_wide
+        width: self.pill_width if app.is_wide else 0
+        size_hint_x: None
         pos_hint: {"center_y": .5}
 
     MDIconButton:
         icon: "trash-can-outline"
         theme_icon_color: "Custom"
-        icon_color: tokens.MUTED
+        icon_color: theme.muted
         pos_hint: {"center_y": .5}
         on_release: root.delete_callback() if root.delete_callback else None
 
@@ -97,25 +101,48 @@ Builder.load_string('''
                         font_size: sp(22)
                         bold: True
                         theme_text_color: "Custom"
-                        text_color: tokens.TEXT
+                        text_color: theme.text
                     MDLabel:
-                        text: "Registry, door permissions and the access audit trail."
+                        text: "Registry, door permissions and the access audit trail." if app.is_wide else "Registry and access log."
                         font_size: sp(11)
                         theme_text_color: "Custom"
-                        text_color: tokens.MUTED
-                Widget:
+                        text_color: theme.muted
                 MDTextButton:
                     text: "Register someone"
                     font_size: sp(11)
                     size_hint_x: None
-                    width: dp(128)
+                    width: dp(128) if app.is_wide else 0
+                    opacity: 1 if app.is_wide else 0
+                    disabled: not app.is_wide
                     pos_hint: {"center_y": .5}
                     on_release: app.open_access_register()
                 MDTextButton:
                     text: "Export log"
                     font_size: sp(11)
                     size_hint_x: None
-                    width: dp(90)
+                    width: dp(90) if app.is_wide else 0
+                    opacity: 1 if app.is_wide else 0
+                    disabled: not app.is_wide
+                    pos_hint: {"center_y": .5}
+                    on_release: app.export_access_log()
+                MDIconButton:
+                    icon: "account-plus-outline"
+                    theme_icon_color: "Custom"
+                    icon_color: theme.primary_text
+                    opacity: 1 if not app.is_wide else 0
+                    disabled: app.is_wide
+                    width: dp(40) if not app.is_wide else 0
+                    size_hint_x: None
+                    pos_hint: {"center_y": .5}
+                    on_release: app.open_access_register()
+                MDIconButton:
+                    icon: "download-outline"
+                    theme_icon_color: "Custom"
+                    icon_color: theme.muted
+                    opacity: 1 if not app.is_wide else 0
+                    disabled: app.is_wide
+                    width: dp(40) if not app.is_wide else 0
+                    size_hint_x: None
                     pos_hint: {"center_y": .5}
                     on_release: app.export_access_log()
 
@@ -132,16 +159,15 @@ Builder.load_string('''
                         font_size: sp(15)
                         bold: True
                         theme_text_color: "Custom"
-                        text_color: tokens.TEXT
-                    Widget:
+                        text_color: theme.text
                     MDLabel:
                         text: app.people_count_text
                         font_size: sp(10)
                         halign: "right"
                         size_hint_x: None
-                        width: dp(190)
+                        width: dp(190) if app.is_wide else dp(84)
                         theme_text_color: "Custom"
-                        text_color: tokens.MUTED
+                        text_color: theme.muted
                 MDBoxLayout:
                     id: people_registry_box
                     orientation: "vertical"
@@ -162,7 +188,7 @@ Builder.load_string('''
                         font_size: sp(15)
                         bold: True
                         theme_text_color: "Custom"
-                        text_color: tokens.TEXT
+                        text_color: theme.text
                     Widget:
                     MDTextButton:
                         text: "Export CSV"

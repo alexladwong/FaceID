@@ -15,7 +15,7 @@ from screens.ui import (  # noqa: F401
 
 
 Builder.load_string('''
-#:import tokens screens.tokens
+#:import theme screens.palette.theme
 #:import AppCard screens.ui.AppCard
 #:import CameraCard screens.security.CameraCard
 #:import IconBadge screens.ui.IconBadge
@@ -35,8 +35,8 @@ Builder.load_string('''
 
         IconBadge:
             icon: "account-check-outline" if root.state == "granted" else ("alert-circle-outline" if root.state in ("denied", "error") else "face-recognition")
-            bg: tokens.SUCCESS_SOFT if root.state == "granted" else (tokens.ERROR_SOFT if root.state in ("denied", "error") else tokens.PRIMARY_SOFT)
-            fg: tokens.SUCCESS if root.state == "granted" else (tokens.ERROR if root.state in ("denied", "error") else tokens.PRIMARY)
+            bg: theme.success_soft if root.state == "granted" else (theme.error_soft if root.state in ("denied", "error") else theme.primary_soft)
+            fg: theme.success if root.state == "granted" else (theme.error if root.state in ("denied", "error") else theme.primary_text)
             size: dp(44), dp(44)
             pos_hint: {"center_y": .5}
 
@@ -51,7 +51,7 @@ Builder.load_string('''
                 font_size: sp(16)
                 bold: True
                 theme_text_color: "Custom"
-                text_color: tokens.TEXT
+                text_color: theme.text
             MDLabel:
                 text: root.message
                 font_size: sp(10)
@@ -59,7 +59,7 @@ Builder.load_string('''
                 height: dp(28)
                 text_size: self.width, None
                 theme_text_color: "Custom"
-                text_color: tokens.MUTED
+                text_color: theme.muted
 
     MDLabel:
         text: root.detail_line1
@@ -69,7 +69,7 @@ Builder.load_string('''
         height: dp(18) if root.detail_line1 else 0
         opacity: 1 if root.detail_line1 else 0
         theme_text_color: "Custom"
-        text_color: tokens.TEXT
+        text_color: theme.text
 
     MDLabel:
         text: root.detail_line2
@@ -78,7 +78,7 @@ Builder.load_string('''
         height: dp(16) if root.detail_line2 else 0
         opacity: 1 if root.detail_line2 else 0
         theme_text_color: "Custom"
-        text_color: tokens.MUTED
+        text_color: theme.muted
 
 
 <AccessFormCard>:
@@ -94,7 +94,7 @@ Builder.load_string('''
         size_hint_y: None
         height: dp(22)
         theme_text_color: "Custom"
-        text_color: tokens.TEXT
+        text_color: theme.text
 
     MDLabel:
         text: "Capture one clear, front-facing face. The camera frame is enrolled with the details below."
@@ -103,7 +103,7 @@ Builder.load_string('''
         height: dp(26)
         text_size: self.width, None
         theme_text_color: "Custom"
-        text_color: tokens.MUTED
+        text_color: theme.muted
 
     MDGridLayout:
         cols: 2 if app.is_wide else 1
@@ -170,7 +170,7 @@ Builder.load_string('''
     MDIcon:
         icon: "check-circle" if root.decision == "granted" else ("alert-circle" if root.decision in ("denied", "error") else "information")
         theme_text_color: "Custom"
-        text_color: tokens.SUCCESS if root.decision == "granted" else (tokens.ERROR if root.decision in ("denied", "error") else tokens.MUTED)
+        text_color: theme.success if root.decision == "granted" else (theme.error if root.decision in ("denied", "error") else theme.muted)
         font_size: sp(16)
         size_hint: None, None
         size: dp(20), dp(20)
@@ -186,13 +186,16 @@ Builder.load_string('''
             text: root.name if root.name else "Unknown face"
             font_size: sp(11)
             bold: True
+            shorten: True
+            shorten_from: "right"
+            text_size: self.width, None
             theme_text_color: "Custom"
-            text_color: tokens.TEXT
+            text_color: theme.text
         MDLabel:
             text: root.detail
             font_size: sp(9)
             theme_text_color: "Custom"
-            text_color: tokens.MUTED
+            text_color: theme.muted
             shorten: True
             shorten_from: "right"
             text_size: self.width, None
@@ -203,10 +206,10 @@ Builder.load_string('''
         text: root.time_text
         font_size: sp(9)
         size_hint_x: None
-        width: dp(132)
+        width: dp(132) if app.is_wide else dp(68)
         halign: "right"
         theme_text_color: "Custom"
-        text_color: tokens.MUTED
+        text_color: theme.muted
 
 
 <AccessBox>:
@@ -237,18 +240,21 @@ Builder.load_string('''
                         font_size: sp(22)
                         bold: True
                         theme_text_color: "Custom"
-                        text_color: tokens.TEXT
+                        text_color: theme.text
                     MDLabel:
                         text: app.door_name + "  -  scan a registered face to unlock"
                         font_size: sp(11)
                         theme_text_color: "Custom"
-                        text_color: tokens.MUTED
-                Widget:
+                        text_color: theme.muted
                 StatusPill:
                     text: app.door_controller_label
                     icon: "door-open"
-                    bg: tokens.PRIMARY_SOFT
-                    fg: tokens.PRIMARY
+                    bg: theme.primary_soft
+                    fg: theme.primary_text
+                    opacity: 1 if app.is_wide else 0
+                    disabled: not app.is_wide
+                    width: self.pill_width if app.is_wide else 0
+                    size_hint_x: None
                     pos_hint: {"center_y": .5}
 
             MDCard:
@@ -261,12 +267,12 @@ Builder.load_string('''
                 spacing: dp(10)
                 radius: [dp(13)]
                 elevation: 0
-                md_bg_color: tokens.WARNING_SOFT
-                border_color: tokens.TRANSPARENT
+                md_bg_color: theme.warning_soft
+                border_color: theme.transparent
                 MDIcon:
                     icon: "alert-outline"
                     theme_text_color: "Custom"
-                    text_color: tokens.WARNING
+                    text_color: theme.warning
                     font_size: sp(16)
                     size_hint: None, None
                     size: dp(18), dp(18)
@@ -277,12 +283,12 @@ Builder.load_string('''
                     adaptive_height: True
                     text_size: self.width, None
                     theme_text_color: "Custom"
-                    text_color: tokens.WARNING
+                    text_color: theme.warning
                 MDTextButton:
                     text: "START"
                     font_size: sp(10)
                     theme_text_color: "Custom"
-                    text_color: tokens.WARNING
+                    text_color: theme.warning
                     pos_hint: {"center_y": .5}
                     on_release: app.start_face_services()
 
@@ -304,27 +310,31 @@ Builder.load_string('''
                     text: "Scan access"
                     icon: "face-recognition"
                     font_size: sp(11)
-                    size_hint: None, None
-                    size: dp(146), dp(38)
-                    md_bg_color: tokens.PRIMARY if app.access_mode == "scan" else tokens.PRIMARY_SOFT
+                    size_hint_x: None if app.is_wide else 0.5
+                    width: dp(146) if app.is_wide else 0
+                    height: dp(38)
+                    md_bg_color: theme.primary if app.access_mode == "scan" else theme.primary_soft
                     theme_text_color: "Custom"
-                    text_color: (1, 1, 1, 1) if app.access_mode == "scan" else tokens.PRIMARY
+                    text_color: (1, 1, 1, 1) if app.access_mode == "scan" else theme.primary_text
                     theme_icon_color: "Custom"
-                    icon_color: (1, 1, 1, 1) if app.access_mode == "scan" else tokens.PRIMARY
+                    icon_color: (1, 1, 1, 1) if app.access_mode == "scan" else theme.primary_text
                     on_release: app.set_access_mode("scan")
                 MDFillRoundFlatIconButton:
                     text: "Register person"
                     icon: "account-plus"
                     font_size: sp(11)
-                    size_hint: None, None
-                    size: dp(158), dp(38)
-                    md_bg_color: tokens.PRIMARY if app.access_mode == "register" else tokens.PRIMARY_SOFT
+                    size_hint_x: None if app.is_wide else 0.5
+                    width: dp(158) if app.is_wide else 0
+                    height: dp(38)
+                    md_bg_color: theme.primary if app.access_mode == "register" else theme.primary_soft
                     theme_text_color: "Custom"
-                    text_color: (1, 1, 1, 1) if app.access_mode == "register" else tokens.PRIMARY
+                    text_color: (1, 1, 1, 1) if app.access_mode == "register" else theme.primary_text
                     theme_icon_color: "Custom"
-                    icon_color: (1, 1, 1, 1) if app.access_mode == "register" else tokens.PRIMARY
+                    icon_color: (1, 1, 1, 1) if app.access_mode == "register" else theme.primary_text
                     on_release: app.set_access_mode("register")
                 Widget:
+                    size_hint_x: 1 if app.is_wide else 0
+                    width: 0
 
             AccessResultCard:
                 id: access_result
@@ -361,12 +371,12 @@ Builder.load_string('''
                 spacing: dp(10)
                 radius: [dp(13)]
                 elevation: 0
-                md_bg_color: tokens.WARNING_SOFT
-                border_color: tokens.TRANSPARENT
+                md_bg_color: theme.warning_soft
+                border_color: theme.transparent
                 MDIcon:
                     icon: "shield-alert-outline"
                     theme_text_color: "Custom"
-                    text_color: tokens.WARNING
+                    text_color: theme.warning
                     font_size: sp(16)
                     size_hint: None, None
                     size: dp(18), dp(18)
@@ -377,7 +387,7 @@ Builder.load_string('''
                     adaptive_height: True
                     text_size: self.width, None
                     theme_text_color: "Custom"
-                    text_color: tokens.WARNING
+                    text_color: theme.warning
 
             AppCard:
                 orientation: "vertical"
@@ -392,7 +402,7 @@ Builder.load_string('''
                         font_size: sp(15)
                         bold: True
                         theme_text_color: "Custom"
-                        text_color: tokens.TEXT
+                        text_color: theme.text
                     Widget:
                     MDTextButton:
                         text: "Export log"

@@ -16,15 +16,21 @@ from kivy.uix.floatlayout import FloatLayout
 from kivymd.uix.behaviors import HoverBehavior
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.card import MDCard
+from kivymd.uix.button import MDIconButton
+from kivymd.uix.tooltip import MDTooltip
 
-from screens import tokens
+from screens.palette import theme
+
+
+class TooltipMDIconButton(MDIconButton, MDTooltip):
+    """Icon button with a compact material tooltip (used by the icon rail)."""
 
 
 class AppCard(MDCard):
     """A card with the app's own border colour (KivyMD only honours
     ``line_color`` in the M3 material style)."""
 
-    border_color = ColorProperty(tokens.LINE)
+    border_color = ColorProperty(theme.line)
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -34,8 +40,8 @@ class IconBadge(FloatLayout):
     """Rounded tinted square with a centred Material icon."""
 
     icon = StringProperty("information-outline")
-    bg = ColorProperty(tokens.PRIMARY_SOFT)
-    fg = ColorProperty(tokens.PRIMARY)
+    bg = ColorProperty(theme.primary_soft)
+    fg = ColorProperty(theme.primary)
 
 
 class Pill(MDCard):
@@ -48,8 +54,8 @@ class Pill(MDCard):
 
     text = StringProperty("")
     icon = StringProperty("check-circle-outline")
-    fg = ColorProperty(tokens.SUCCESS)
-    bg = ColorProperty(tokens.SUCCESS_SOFT)
+    fg = ColorProperty(theme.success)
+    bg = ColorProperty(theme.success_soft)
     font_size = NumericProperty(sp(10))
     icon_size = NumericProperty(sp(12))
     text_width = NumericProperty(0)
@@ -82,8 +88,8 @@ class Pill(MDCard):
 class FeatureChip(Pill):
     """Small translucent pill used on the brand hero."""
 
-    fg = ColorProperty(tokens.ON_PRIMARY)
-    bg = ColorProperty(tokens.WHITE_12)
+    fg = ColorProperty(theme.text_on_primary)
+    bg = ColorProperty(theme.white_12)
 
 
 class StatusPill(Pill):
@@ -118,8 +124,8 @@ class NoticeCard(AppCard):
     icon = StringProperty("alert-circle-outline")
     title = StringProperty("")
     detail = StringProperty("")
-    tint = ColorProperty(tokens.ERROR_SOFT)
-    fg = ColorProperty(tokens.ERROR)
+    tint = ColorProperty(theme.error_soft)
+    fg = ColorProperty(theme.error)
 
 
 class UploadTile(AppCard):
@@ -131,6 +137,12 @@ class UploadTile(AppCard):
     purpose = StringProperty("src")
     image_source = StringProperty("")
     file_name = StringProperty("")
+    loaded = BooleanProperty(False)
+    failed = BooleanProperty(False)
+
+    def on_image_source(self, *args):
+        self.loaded = False
+        self.failed = False
 
 
 class ResultPane(AppCard):
@@ -151,14 +163,14 @@ class SettingsRow(ButtonBehavior, HoverBehavior, MDBoxLayout):
     icon = StringProperty("cog-outline")
     title = StringProperty("")
     subtitle = StringProperty("")
-    tint = ColorProperty(tokens.PRIMARY_SOFT)
-    fg = ColorProperty(tokens.PRIMARY)
+    tint = ColorProperty(theme.primary_soft)
+    fg = ColorProperty(theme.primary)
     chevron = BooleanProperty(True)
-    hover_bg = ColorProperty(tokens.TRANSPARENT)
+    hover_bg = ColorProperty(theme.transparent)
 
 
 Builder.load_string('''
-#:import tokens screens.tokens
+#:import theme screens.palette.theme
 #:import parse_color kivy.parser.parse_color
 
 
@@ -166,7 +178,8 @@ Builder.load_string('''
     orientation: "vertical"
     radius: [dp(18)]
     elevation: 0
-    md_bg_color: tokens.CARD
+    md_bg_color: theme.card
+    border_color: theme.line
     canvas.after:
         Color:
             rgba: root.border_color
@@ -177,6 +190,8 @@ Builder.load_string('''
 
 <IconBadge>:
     size_hint: None, None
+    bg: theme.primary_soft
+    fg: theme.primary_text
     canvas.before:
         Color:
             rgba: root.bg
@@ -203,7 +218,7 @@ Builder.load_string('''
     spacing: dp(5)
     radius: [dp(13)]
     elevation: 0
-    border_color: tokens.TRANSPARENT
+    border_color: theme.transparent
     md_bg_color: root.bg
     MDIcon:
         icon: root.icon
@@ -234,7 +249,7 @@ Builder.load_string('''
     spacing: dp(4)
     radius: [dp(13)]
     elevation: 0
-    border_color: tokens.TRANSPARENT
+    border_color: theme.transparent
     md_bg_color: root.bg
     MDIcon:
         icon: root.icon
@@ -265,7 +280,7 @@ Builder.load_string('''
     MDIcon:
         icon: root.icon
         theme_text_color: "Custom"
-        text_color: tokens.MUTED
+        text_color: theme.muted
         font_size: sp(30)
         size_hint: None, None
         size: dp(40), dp(34)
@@ -276,7 +291,7 @@ Builder.load_string('''
         font_size: sp(12)
         bold: True
         theme_text_color: "Custom"
-        text_color: tokens.TEXT
+        text_color: theme.text
         size_hint_y: None
         height: self.texture_size[1]
         text_size: self.width, None
@@ -285,7 +300,7 @@ Builder.load_string('''
         halign: "center"
         font_size: sp(10)
         theme_text_color: "Custom"
-        text_color: tokens.MUTED
+        text_color: theme.muted
         size_hint_y: None
         height: self.texture_size[1] if root.detail else 0
         text_size: self.width, None
@@ -305,14 +320,14 @@ Builder.load_string('''
         size: dp(28), dp(28)
         pos_hint: {"center_x": .5}
         active: True
-        color: tokens.PRIMARY
+        color: theme.primary
     MDLabel:
         text: root.text
         halign: "center"
         font_size: sp(12)
         bold: True
         theme_text_color: "Custom"
-        text_color: tokens.TEXT
+        text_color: theme.text
         size_hint_y: None
         height: self.texture_size[1]
         text_size: self.width, None
@@ -321,7 +336,7 @@ Builder.load_string('''
         halign: "center"
         font_size: sp(10)
         theme_text_color: "Custom"
-        text_color: tokens.MUTED
+        text_color: theme.muted
         size_hint_y: None
         height: self.texture_size[1] if root.detail else 0
         text_size: self.width, None
@@ -355,12 +370,12 @@ Builder.load_string('''
             height: dp(40)
             text_size: self.width, None
             theme_text_color: "Custom"
-            text_color: tokens.TEXT
+            text_color: theme.text
     MDLabel:
         text: root.detail
         font_size: sp(11)
         theme_text_color: "Custom"
-        text_color: tokens.MUTED
+        text_color: theme.muted
         size_hint_y: None
         height: self.texture_size[1]
         text_size: self.width, None
@@ -374,12 +389,12 @@ Builder.load_string('''
     spacing: dp(9)
     radius: [dp(13)]
     elevation: 0
-    border_color: tokens.TRANSPARENT
-    md_bg_color: tokens.PRIMARY_SOFT
+    border_color: theme.transparent
+    md_bg_color: theme.primary_soft
     MDIcon:
         icon: "lightbulb-on-outline"
         theme_text_color: "Custom"
-        text_color: tokens.PRIMARY
+        text_color: theme.primary_text
         font_size: sp(16)
         size_hint: None, None
         size: dp(18), dp(18)
@@ -390,11 +405,11 @@ Builder.load_string('''
         adaptive_height: True
         text_size: self.width, None
         theme_text_color: "Custom"
-        text_color: tokens.TEXT
+        text_color: theme.text
     MDIconButton:
         icon: "close"
         theme_icon_color: "Custom"
-        icon_color: tokens.MUTED
+        icon_color: theme.muted
         icon_size: sp(15)
         size_hint: None, None
         size: dp(26), dp(26)
@@ -417,7 +432,7 @@ Builder.load_string('''
         padding: dp(6)
         canvas.before:
             Color:
-                rgba: parse_color(tokens.PRIMARY_SOFT)
+                rgba: parse_color(theme.primary_soft)
             RoundedRectangle:
                 pos: self.pos
                 size: self.size
@@ -426,7 +441,7 @@ Builder.load_string('''
             MDIcon:
                 icon: root.icon_name
                 theme_text_color: "Custom"
-                text_color: tokens.PRIMARY
+                text_color: theme.primary_text
                 font_size: sp(34)
                 size_hint: None, None
                 size: dp(44), dp(44)
@@ -437,7 +452,7 @@ Builder.load_string('''
                 halign: "center"
                 font_size: sp(10)
                 theme_text_color: "Custom"
-                text_color: tokens.MUTED
+                text_color: theme.muted
                 size_hint_y: None
                 height: dp(16)
                 pos_hint: {"center_x": .5, "center_y": .34}
@@ -446,6 +461,23 @@ Builder.load_string('''
                 source: root.image_source
                 fit_mode: "contain"
                 opacity: 1 if root.image_source else 0
+                on_texture: root.loaded = bool(self.texture)
+            MDSpinner:
+                active: bool(root.image_source) and not root.loaded and not root.failed
+                opacity: 1 if root.image_source and not root.loaded and not root.failed else 0
+                size_hint: None, None
+                size: dp(24), dp(24)
+                pos_hint: {"center_x": .5, "center_y": .5}
+                color: theme.primary
+            MDIcon:
+                icon: "alert-circle-outline"
+                theme_text_color: "Custom"
+                text_color: theme.error
+                font_size: sp(28)
+                size_hint: None, None
+                size: dp(32), dp(32)
+                pos_hint: {"center_x": .5, "center_y": .5}
+                opacity: 1 if root.failed else 0
     MDLabel:
         text: root.title
         font_size: sp(13)
@@ -453,7 +485,7 @@ Builder.load_string('''
         size_hint_y: None
         height: dp(20)
         theme_text_color: "Custom"
-        text_color: tokens.TEXT
+        text_color: theme.text
     MDLabel:
         text: root.file_name if root.file_name else root.subtitle
         font_size: sp(10)
@@ -463,7 +495,7 @@ Builder.load_string('''
         height: dp(16)
         text_size: self.width, None
         theme_text_color: "Custom"
-        text_color: tokens.MUTED
+        text_color: theme.muted
 
 
 <ResultPane>:
@@ -480,7 +512,7 @@ Builder.load_string('''
         height: dp(16)
         text_size: self.width, None
         theme_text_color: "Custom"
-        text_color: tokens.MUTED
+        text_color: theme.muted
     MDBoxLayout:
         id: content
 
@@ -489,6 +521,8 @@ Builder.load_string('''
     orientation: "horizontal"
     size_hint_y: None
     height: dp(56)
+    tint: theme.primary_soft
+    fg: theme.primary_text
     spacing: dp(12)
     padding: dp(8), 0, dp(4), 0
     opacity: .55 if self.disabled else 1
@@ -499,8 +533,8 @@ Builder.load_string('''
             pos: self.pos
             size: self.size
             radius: [dp(12)]
-    on_enter: root.hover_bg = parse_color(tokens.HOVER) if not root.disabled else parse_color(tokens.TRANSPARENT)
-    on_leave: root.hover_bg = parse_color(tokens.TRANSPARENT)
+    on_enter: root.hover_bg = parse_color(theme.hover) if not root.disabled else parse_color(theme.transparent)
+    on_leave: root.hover_bg = parse_color(theme.transparent)
     IconBadge:
         icon: root.icon
         bg: root.tint
@@ -519,7 +553,7 @@ Builder.load_string('''
             bold: True
             adaptive_height: True
             theme_text_color: "Custom"
-            text_color: tokens.TEXT
+            text_color: theme.text
         MDLabel:
             text: root.subtitle
             font_size: sp(10)
@@ -528,12 +562,12 @@ Builder.load_string('''
             shorten_from: "right"
             text_size: self.width, None
             theme_text_color: "Custom"
-            text_color: tokens.MUTED
+            text_color: theme.muted
     Widget:
     MDIcon:
         icon: "chevron-right"
         theme_text_color: "Custom"
-        text_color: "#C2C7D4"
+        text_color: theme.muted
         font_size: sp(18)
         size_hint: None, None
         size: dp(20), dp(20)
@@ -547,8 +581,8 @@ Builder.load_string('''
     ripple_behavior: True
     size_hint_y: None
     height: dp(104)
-    on_enter: self.border_color = parse_color(tokens.PRIMARY)
-    on_leave: self.border_color = parse_color(tokens.LINE)
+    on_enter: self.border_color = parse_color(theme.primary)
+    on_leave: self.border_color = parse_color(theme.line)
     on_release: app.open_file(root.image_source)
 
     Image:

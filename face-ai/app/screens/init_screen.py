@@ -16,7 +16,7 @@ from screens.ui import (  # noqa: F401
 
 
 Builder.load_string('''
-#:import tokens screens.tokens
+#:import theme screens.palette.theme
 #:import AppCard screens.ui.AppCard
 #:import EmptyState screens.ui.EmptyState
 #:import FeatureChip screens.ui.FeatureChip
@@ -54,18 +54,17 @@ Builder.load_string('''
                         font_size: sp(22)
                         bold: True
                         theme_text_color: "Custom"
-                        text_color: tokens.TEXT
+                        text_color: theme.text
                     MDLabel:
-                        text: "Your private face workspace"
+                        text: "Your private face workspace" if app.is_wide else "Private face workspace"
                         font_size: sp(11)
                         theme_text_color: "Custom"
-                        text_color: tokens.MUTED
-                Widget:
+                        text_color: theme.muted
                 StatusPill:
                     text: "Offline"
                     icon: "wifi-off"
-                    bg: tokens.PRIMARY_SOFT
-                    fg: tokens.PRIMARY
+                    bg: theme.primary_soft
+                    fg: theme.primary_text
                     pos_hint: {"center_y": .5}
 
             # --- hero ----------------------------------------------------
@@ -76,8 +75,8 @@ Builder.load_string('''
                 padding: dp(20)
                 radius: [dp(22)]
                 elevation: 0
-                md_bg_color: tokens.PRIMARY
-                border_color: tokens.TRANSPARENT
+                md_bg_color: theme.primary
+                border_color: theme.transparent
 
                 MDBoxLayout:
                     size_hint_y: None
@@ -88,12 +87,12 @@ Builder.load_string('''
                         size: dp(52), dp(52)
                         radius: [dp(15)]
                         elevation: 0
-                        md_bg_color: tokens.WHITE_18
-                        border_color: tokens.TRANSPARENT
+                        md_bg_color: theme.white_18
+                        border_color: theme.transparent
                         MDIcon:
                             icon: "face-recognition"
                             theme_text_color: "Custom"
-                            text_color: tokens.ON_PRIMARY
+                            text_color: theme.text_on_primary
                             font_size: sp(28)
                             pos_hint: {"center_x": .5, "center_y": .5}
                     MDBoxLayout:
@@ -107,12 +106,12 @@ Builder.load_string('''
                             font_size: sp(19)
                             bold: True
                             theme_text_color: "Custom"
-                            text_color: tokens.ON_PRIMARY
+                            text_color: theme.text_on_primary
                         MDLabel:
                             text: "Detect, match and unlock - all on this device."
                             font_size: sp(11)
                             theme_text_color: "Custom"
-                            text_color: tokens.ON_PRIMARY_SOFT
+                            text_color: theme.text_on_primary_soft
 
                 Widget:
                     size_hint_y: 1
@@ -129,9 +128,9 @@ Builder.load_string('''
                         size: dp(196), dp(42)
                         md_bg_color: 1, 1, 1, 1
                         theme_text_color: "Custom"
-                        text_color: tokens.PRIMARY
+                        text_color: theme.primary_dark
                         theme_icon_color: "Custom"
-                        icon_color: tokens.PRIMARY
+                        icon_color: theme.primary_dark
                         disabled: app.download_active
                         on_release: app.home_action()
                     Widget:
@@ -159,8 +158,8 @@ Builder.load_string('''
                     spacing: dp(12)
                     IconBadge:
                         icon: "cube-outline"
-                        bg: tokens.PRIMARY_SOFT
-                        fg: tokens.PRIMARY
+                        bg: theme.primary_soft
+                        fg: theme.primary_text
                         size: dp(38), dp(38)
                         pos_hint: {"center_y": .5}
                     MDBoxLayout:
@@ -173,13 +172,13 @@ Builder.load_string('''
                             text: "Models"
                             font_size: sp(11)
                             theme_text_color: "Custom"
-                            text_color: tokens.MUTED
+                            text_color: theme.muted
                         MDLabel:
                             text: "Ready" if app.models_ready else "Missing"
                             font_size: sp(16)
                             bold: True
                             theme_text_color: "Custom"
-                            text_color: tokens.SUCCESS if app.models_ready else tokens.WARNING
+                            text_color: theme.success if app.models_ready else theme.warning
 
                 AppCard:
                     orientation: "horizontal"
@@ -187,8 +186,8 @@ Builder.load_string('''
                     spacing: dp(12)
                     IconBadge:
                         icon: "brain"
-                        bg: tokens.SUCCESS_SOFT
-                        fg: tokens.SUCCESS
+                        bg: theme.success_soft
+                        fg: theme.success
                         size: dp(38), dp(38)
                         pos_hint: {"center_y": .5}
                     MDBoxLayout:
@@ -201,22 +200,23 @@ Builder.load_string('''
                             text: "Face engine"
                             font_size: sp(11)
                             theme_text_color: "Custom"
-                            text_color: tokens.MUTED
+                            text_color: theme.muted
                         MDLabel:
                             text: "Running" if app.services_running else "Stopped"
                             font_size: sp(16)
                             bold: True
                             theme_text_color: "Custom"
-                            text_color: tokens.SUCCESS if app.services_running else tokens.MUTED
+                            text_color: theme.success if app.services_running else theme.muted
 
                 AppCard:
                     orientation: "horizontal"
                     padding: dp(14)
                     spacing: dp(12)
+                    on_release: app.goto_screen("securityScr")
                     IconBadge:
                         icon: "shield-lock-outline"
-                        bg: "#F1F3F9"
-                        fg: tokens.MUTED
+                        bg: theme.primary_soft
+                        fg: theme.primary_text
                         size: dp(38), dp(38)
                         pos_hint: {"center_y": .5}
                     MDBoxLayout:
@@ -226,16 +226,24 @@ Builder.load_string('''
                         spacing: dp(1)
                         pos_hint: {"center_y": .5}
                         MDLabel:
-                            text: "Secure vault"
-                            font_size: sp(11)
+                            text: "Secure vault  -  encrypted at rest"
+                            font_size: sp(10)
                             theme_text_color: "Custom"
-                            text_color: tokens.MUTED
+                            text_color: theme.muted
                         MDLabel:
-                            text: "Encrypted"
+                            text: "Unlocked" if app.login_success else "Locked"
                             font_size: sp(16)
                             bold: True
                             theme_text_color: "Custom"
-                            text_color: tokens.SUCCESS
+                            text_color: theme.success if app.login_success else theme.text
+                    MDIcon:
+                        icon: "chevron-right"
+                        theme_text_color: "Custom"
+                        text_color: theme.muted
+                        font_size: sp(18)
+                        size_hint: None, None
+                        size: dp(20), dp(20)
+                        pos_hint: {"center_y": .5}
 
             # --- first-run setup ----------------------------------------
             AppCard:
@@ -254,7 +262,7 @@ Builder.load_string('''
                         font_size: sp(15)
                         bold: True
                         theme_text_color: "Custom"
-                        text_color: tokens.TEXT
+                        text_color: theme.text
                     Widget:
                     MDLabel:
                         text: "one time"
@@ -263,7 +271,7 @@ Builder.load_string('''
                         width: dp(56)
                         halign: "right"
                         theme_text_color: "Custom"
-                        text_color: tokens.MUTED
+                        text_color: theme.muted
                 MDLabel:
                     text: "Download the ONNX models once (~140 MB), then the face engine starts automatically. Everything runs on this device."
                     font_size: sp(11)
@@ -271,7 +279,7 @@ Builder.load_string('''
                     height: self.texture_size[1]
                     text_size: self.width, None
                     theme_text_color: "Custom"
-                    text_color: tokens.MUTED
+                    text_color: theme.muted
                 MDBoxLayout:
                     size_hint_y: None
                     height: dp(38)
@@ -288,7 +296,7 @@ Builder.load_string('''
                         value: app.download_progress_value
                         size_hint_y: None
                         height: dp(6)
-                        color: tokens.PRIMARY
+                        color: theme.primary
                     MDLabel:
                         text: app.download_status_text
                         font_size: sp(9)
@@ -296,7 +304,7 @@ Builder.load_string('''
                         width: dp(120)
                         halign: "right"
                         theme_text_color: "Custom"
-                        text_color: tokens.MUTED
+                        text_color: theme.muted
 
             # --- recent matches -----------------------------------------
             MDBoxLayout:
@@ -313,7 +321,7 @@ Builder.load_string('''
                         font_size: sp(15)
                         bold: True
                         theme_text_color: "Custom"
-                        text_color: tokens.TEXT
+                        text_color: theme.text
                     Widget:
                     MDTextButton:
                         text: "Open folder"
@@ -357,8 +365,8 @@ Builder.load_string('''
                 spacing: dp(12)
                 IconBadge:
                     icon: "folder-lock-outline"
-                    bg: "#F1F3F9"
-                    fg: tokens.MUTED
+                    bg: theme.primary_soft
+                    fg: theme.muted
                     size: dp(34), dp(34)
                     pos_hint: {"center_y": .5}
                 MDBoxLayout:
@@ -373,13 +381,13 @@ Builder.load_string('''
                         bold: True
                         adaptive_height: True
                         theme_text_color: "Custom"
-                        text_color: tokens.TEXT
+                        text_color: theme.text
                     MDLabel:
                         text: "Models, vault and results never leave this device."
                         font_size: sp(10)
                         adaptive_height: True
                         theme_text_color: "Custom"
-                        text_color: tokens.MUTED
+                        text_color: theme.muted
                 Widget:
                 MDTextButton:
                     text: "Open data folder"
@@ -396,7 +404,7 @@ Builder.load_string('''
                 size_hint_y: None
                 height: dp(16)
                 theme_text_color: "Custom"
-                text_color: tokens.MUTED
+                text_color: theme.muted
 ''')
 
 

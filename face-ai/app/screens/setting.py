@@ -10,7 +10,7 @@ from screens.ui import AppCard, SettingsRow  # noqa: F401
 
 
 Builder.load_string('''
-#:import tokens screens.tokens
+#:import theme screens.palette.theme
 #:import AppCard screens.ui.AppCard
 #:import SettingsRow screens.ui.SettingsRow
 
@@ -38,14 +38,14 @@ Builder.load_string('''
                 size_hint_y: None
                 height: dp(30)
                 theme_text_color: "Custom"
-                text_color: tokens.TEXT
+                text_color: theme.text
             MDLabel:
                 text: "Manage storage, review privacy and reach the developer."
                 font_size: sp(11)
                 size_hint_y: None
                 height: dp(18)
                 theme_text_color: "Custom"
-                text_color: tokens.MUTED
+                text_color: theme.muted
 
             # --- storage -------------------------------------------------
             AppCard:
@@ -62,12 +62,12 @@ Builder.load_string('''
                     size_hint_y: None
                     height: dp(18)
                     theme_text_color: "Custom"
-                    text_color: tokens.MUTED
+                    text_color: theme.muted
 
                 SettingsRow:
                     icon: "broom"
-                    tint: tokens.WARNING_SOFT
-                    fg: tokens.WARNING
+                    tint: theme.warning_soft
+                    fg: theme.warning
                     title: "Delete generated images"
                     subtitle: app.output_count_label
                     on_release: app.show_all_delete_alert()
@@ -78,6 +78,35 @@ Builder.load_string('''
                     subtitle: "Models, vault and generated results"
                     disabled: not app.is_desktop
                     on_release: app.open_data_folder()
+
+            # --- appearance ----------------------------------------------
+            AppCard:
+                orientation: "vertical"
+                size_hint_y: None
+                height: self.minimum_height
+                padding: dp(10)
+                spacing: dp(2)
+
+                MDLabel:
+                    text: "APPEARANCE"
+                    font_size: sp(9)
+                    bold: True
+                    size_hint_y: None
+                    height: dp(18)
+                    theme_text_color: "Custom"
+                    text_color: theme.muted
+
+                SettingsRow:
+                    icon: "weather-night" if not app.theme_dark else "white-balance-sunny"
+                    title: "Dark mode"
+                    subtitle: app.theme_label + "  -  tap to switch theme"
+                    on_release: app.toggle_theme()
+
+                SettingsRow:
+                    icon: "animation-outline"
+                    title: "Reduce motion"
+                    subtitle: app.motion_label + "  -  disable drawer and toast animations"
+                    on_release: app.toggle_reduce_motion()
 
             # --- door access ---------------------------------------------
             AppCard:
@@ -94,11 +123,11 @@ Builder.load_string('''
                     size_hint_y: None
                     height: dp(18)
                     theme_text_color: "Custom"
-                    text_color: tokens.MUTED
+                    text_color: theme.muted
 
                 SettingsRow:
                     icon: "door-open"
-                    tint: tokens.PRIMARY_SOFT
+                    tint: theme.primary_soft
                     title: "Door"
                     subtitle: app.door_name + "  -  " + app.door_controller_label
                     chevron: False
@@ -130,7 +159,7 @@ Builder.load_string('''
                     size_hint_y: None
                     height: dp(18)
                     theme_text_color: "Custom"
-                    text_color: tokens.MUTED
+                    text_color: theme.muted
 
                 SettingsRow:
                     icon: "information-outline"
@@ -140,8 +169,8 @@ Builder.load_string('''
 
                 SettingsRow:
                     icon: "shield-lock-outline"
-                    tint: tokens.SUCCESS_SOFT
-                    fg: tokens.SUCCESS
+                    tint: theme.success_soft
+                    fg: theme.success
                     title: "Private by default"
                     subtitle: "Detection, matching and the vault run on this device"
                     chevron: False
@@ -167,7 +196,7 @@ Builder.load_string('''
                     size_hint_y: None
                     height: dp(18)
                     theme_text_color: "Custom"
-                    text_color: tokens.MUTED
+                    text_color: theme.muted
 
                 SettingsRow:
                     icon: "file-document-outline"
@@ -206,7 +235,7 @@ Builder.load_string('''
                 size_hint_y: None
                 height: dp(20)
                 theme_text_color: "Custom"
-                text_color: tokens.MUTED
+                text_color: theme.muted
 ''')
 
 

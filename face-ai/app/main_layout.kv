@@ -1,6 +1,6 @@
 # main_layout.kv
 ## import local components
-#:import tokens screens.tokens
+#:import theme screens.palette.theme
 #:import FadeTransition kivy.uix.screenmanager.FadeTransition
 #:import FaceMatchBox screens.face_match.FaceMatchBox
 #:import SettingsBox screens.setting.SettingsBox
@@ -9,11 +9,12 @@
 #:import AccessBox screens.access.AccessBox
 #:import PeopleBox screens.people.PeopleBox
 #:import NavigationMenu screens.navigation.NavigationMenu
+#:import CompactNav screens.navigation.CompactNav
 #:import StatusPill screens.ui.StatusPill
 
 ## Main screen
 MDScreen:
-    md_bg_color: tokens.SURFACE
+    md_bg_color: theme.surface
 
     MainScreenBox:  # main container
         orientation: "vertical"
@@ -25,7 +26,7 @@ MDScreen:
             orientation: "horizontal"
             size_hint_y: None
             height: dp(60)
-            md_bg_color: tokens.PRIMARY
+            md_bg_color: theme.primary
             padding: dp(6), 0, dp(8), 0
             spacing: dp(6)
 
@@ -42,8 +43,8 @@ MDScreen:
                 size: dp(32), dp(32)
                 radius: [dp(10)]
                 elevation: 0
-                md_bg_color: tokens.WHITE_18
-                border_color: tokens.TRANSPARENT
+                md_bg_color: theme.white_18
+                border_color: theme.transparent
                 pos_hint: {"center_y": .5}
                 MDIcon:
                     icon: "face-recognition"
@@ -66,21 +67,39 @@ MDScreen:
                     theme_text_color: "Custom"
                     text_color: 1, 1, 1, 1
                 MDLabel:
-                    text: "Offline face recognition"
+                    text: "Offline face recognition" if app.is_wide else "Offline"
                     font_size: sp(9)
                     theme_text_color: "Custom"
                     text_color: 1, 1, 1, .72
 
             Widget:
 
+            MDIconButton:
+                icon: "chevron-left" if not app.nav_collapsed else "chevron-right"
+                theme_icon_color: "Custom"
+                icon_color: 1, 1, 1, 1
+                opacity: 1 if app.is_wide else 0
+                disabled: not app.is_wide
+                width: dp(40) if app.is_wide else 0
+                size_hint_x: None
+                on_release: app.toggle_nav_collapse()
+
             StatusPill:
                 text: "Engine running" if app.services_running else "Engine stopped"
                 icon: "play-circle-outline"
-                bg: tokens.SUCCESS_SOFT if app.services_running else tokens.WHITE_18
-                fg: tokens.SUCCESS if app.services_running else "#FFFFFF"
+                bg: theme.success_soft if app.services_running else theme.white_18
+                fg: theme.success if app.services_running else "#FFFFFF"
                 opacity: 1 if app.is_wide else 0
                 disabled: not app.is_wide
+                width: self.pill_width if app.is_wide else 0
+                size_hint_x: None
                 pos_hint: {"center_y": .5}
+
+            MDIconButton:
+                icon: "weather-night" if not app.theme_dark else "white-balance-sunny"
+                theme_icon_color: "Custom"
+                icon_color: 1, 1, 1, 1
+                on_release: app.toggle_theme()
 
             MDIconButton:
                 icon: "help-circle-outline"
@@ -103,14 +122,14 @@ MDScreen:
 
                 MDScreen:
                     name: "initScreen"
-                    md_bg_color: tokens.SURFACE
+                    md_bg_color: theme.surface
                     on_enter: app.refresh_recent_outputs()
                     InitBox:
                         id: init_screen
 
                 MDScreen:
                     name: "accessScr"
-                    md_bg_color: tokens.SURFACE
+                    md_bg_color: theme.surface
                     on_enter: app.on_access_enter()
                     on_leave: app.on_access_leave()
                     AccessBox:
@@ -118,21 +137,21 @@ MDScreen:
 
                 MDScreen:
                     name: "peopleScr"
-                    md_bg_color: tokens.SURFACE
+                    md_bg_color: theme.surface
                     on_enter: app.on_people_enter()
                     PeopleBox:
                         id: people_box
 
                 MDScreen:
                     name: "faceFindScr"
-                    md_bg_color: tokens.SURFACE
+                    md_bg_color: theme.surface
                     on_enter: app.on_face_matcher_entry()
                     FaceMatchBox:
                         id: face_match_scr
 
                 MDScreen:
                     name: "securityScr"
-                    md_bg_color: tokens.SURFACE
+                    md_bg_color: theme.surface
                     on_enter: app.on_security_enter()
                     on_leave: app.on_security_leave()
                     SecurityBox:
@@ -140,7 +159,7 @@ MDScreen:
 
                 MDScreen:
                     name: "settingsScr"
-                    md_bg_color: tokens.SURFACE
+                    md_bg_color: theme.surface
                     on_enter: app.refresh_output_count()
                     SettingsBox:
                         id: settings_box
@@ -155,7 +174,7 @@ MDScreen:
                 radius: [0]
                 elevation: 0
                 md_bg_color: 0, 0, 0, .45
-                border_color: tokens.TRANSPARENT
+                border_color: theme.transparent
                 opacity: 0
                 disabled: True
                 on_release: app.close_drawer()
@@ -165,14 +184,28 @@ MDScreen:
                 size_hint: None, None
                 x: 0
                 y: 0
-                width: dp(232)
+                width: dp(76) if app.is_wide and app.nav_collapsed else dp(232)
                 height: shell.height
                 radius: [0]
                 elevation: 0
-                md_bg_color: tokens.CARD
-                border_color: tokens.LINE
+                md_bg_color: theme.card
+                border_color: theme.line
 
-                NavigationMenu:
-                    id: nav_menu
+                FloatLayout:
+                    pos: nav_panel.pos
+                    size: nav_panel.size
+                    on_pos: self.do_layout()
+                    NavigationMenu:
+                        id: nav_menu
+                        size_hint: 1, 1
+                        pos_hint: {"x": 0, "y": 0}
+                        opacity: 0 if app.is_wide and app.nav_collapsed else 1
+                        disabled: app.is_wide and app.nav_collapsed
+                    CompactNav:
+                        id: compact_nav
+                        size_hint: 1, 1
+                        pos_hint: {"x": 0, "y": 0}
+                        opacity: 1 if app.is_wide and app.nav_collapsed else 0
+                        disabled: not (app.is_wide and app.nav_collapsed)
 
 # End
