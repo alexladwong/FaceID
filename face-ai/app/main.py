@@ -144,6 +144,7 @@ class FaceAiApp(MDApp):
     vault_sort = StringProperty("date")
     vault_sort_label = StringProperty("Newest")
     vault_count_text = StringProperty("")
+    vault_busy = BooleanProperty(False)
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -2117,13 +2118,22 @@ class FaceAiApp(MDApp):
                 "A file with this name already exists in the vault.", is_error=True
             )
             return
+        self.vault_busy = True
+        self.show_toast_msg(f"Encrypting {filename}...")
+        Thread(
+            target=self._encrypt_vault_file,
+            args=(file_path, target_file, filename),
+            daemon=True,
+        ).start()
+
+    def _encrypt_vault_file(self, file_path, target_file, filename):
+        """Encrypt off the UI thread, then hand the result back to the main thread."""
         try:
             if platform == "android":
                 # encryption not required on android as the internal path is secure
                 import shutil
                 shutil.copyfile(file_path, target_file)
             else:
-                # store encrypted data
                 from cryptography.fernet import Fernet
                 with open(self.encrypt_key, "rb") as key_file:
                     key = key_file.read()
@@ -2131,14 +2141,30 @@ class FaceAiApp(MDApp):
                 with open(file_path, "rb") as file:
                     original_data = file.read()
                 encrypted_data = fernet.encrypt(original_data)
-                with open(target_file, "wb") as tfile:
+                tmp_file = target_file + ".part"
+                with open(tmp_file, "wb") as tfile:
                     tfile.write(encrypted_data)
+                os.replace(tmp_file, target_file)
             print(f"File {filename} successfully uploaded to vault")
-            self.refresh_sec_file_list()
-            self.show_toast_msg(f"{filename} is now encrypted in your vault.")
+            Clock.schedule_once(lambda dt: self._vault_upload_done(filename, None))
         except Exception as e:
             print(f"Error saving file: {e}")
+            try:
+                os.remove(target_file + ".part")
+            except OSError:
+                pass
+            error = e
+            Clock.schedule_once(
+                lambda dt, err=error: self._vault_upload_done(filename, err)
+            )
+
+    def _vault_upload_done(self, filename, error):
+        self.vault_busy = False
+        if error is not None:
             self.show_toast_msg("Could not encrypt that file.", is_error=True)
+            return
+        self.refresh_sec_file_list()
+        self.show_toast_msg(f"{filename} is now encrypted in your vault.")
 
     def save_in_vault(self, selection):
         self.is_inp_file_mgr_open = False

@@ -58,7 +58,8 @@ Existing components: `AppCard`, `IconBadge`, `Pill`, `StatusPill`,
   and errors that need action also appear inline (for example Face Finder
   failure states).
 - Loading: busy bars/spinners on upload tiles, match panes, and vault/door
-  operations.
+  operations. Vault encryption runs off the UI thread; the Upload button shows
+  `Working...` while busy and the file list refreshes on completion.
 - Empty: purpose-written empty states, never mock data.
 - Disabled: primary actions disable while their operation runs.
 

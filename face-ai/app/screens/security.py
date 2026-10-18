@@ -370,11 +370,12 @@ Builder.load_string('''
         spacing: dp(8)
 
         MDFillRoundFlatIconButton:
-            text: "Upload"
-            icon: "folder-key-outline"
+            text: "Working..." if app.vault_busy else "Upload"
+            icon: "progress-clock" if app.vault_busy else "folder-key-outline"
             font_size: sp(11)
             size_hint: None, None
             size: dp(108) if app.is_wide else dp(84), dp(38)
+            disabled: app.vault_busy
             on_release: app.upload_to_vault()
 
         MDFillRoundFlatIconButton:
