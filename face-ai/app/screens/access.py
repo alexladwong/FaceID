@@ -229,21 +229,21 @@ Builder.load_string('''
 
             MDBoxLayout:
                 size_hint_y: None
-                height: dp(44)
+                height: dp(52)
                 MDBoxLayout:
                     orientation: "vertical"
                     size_hint_y: None
-                    height: dp(44)
+                    height: dp(52)
                     spacing: 0
                     MDLabel:
                         text: "Door Access"
-                        font_size: sp(22)
+                        font_size: sp(28)
                         bold: True
                         theme_text_color: "Custom"
                         text_color: theme.text
                     MDLabel:
                         text: app.door_name + "  -  scan a registered face to unlock"
-                        font_size: sp(11)
+                        font_size: sp(12)
                         theme_text_color: "Custom"
                         text_color: theme.muted
                 StatusPill:

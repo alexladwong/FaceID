@@ -15,7 +15,7 @@ from kivymd.uix.navigationdrawer import MDNavigationDrawerItem
 from kivymd.uix.filemanager import MDFileManager
 from kivymd.uix.label import MDLabel
 from kivymd.uix.dialog import MDDialog
-from kivymd.uix.button import MDFlatButton, MDFloatingActionButton
+from kivymd.uix.button import MDFillRoundFlatIconButton, MDFlatButton, MDFloatingActionButton
 
 #
 from kivy.animation import Animation
@@ -51,7 +51,7 @@ from screens.security import (
 from screens.access import AccessEventRow
 from screens.people import PeopleBox, PeopleRow
 from screens.setting import SettingsBox
-from screens.ui import BusyState, EmptyState, NoticeCard, RecentTile
+from screens.ui import AppCard, BusyState, EmptyState, IconBadge, NoticeCard, RecentTile
 
 # IMPORTANT: Set this property for keyboard behavior
 Window.softinput_mode = "below_target"
@@ -110,6 +110,7 @@ class FaceAiApp(MDApp):
     download_status_text = StringProperty("")
     is_onnx_running = BooleanProperty(False)
     match_step_text = StringProperty("1/4  -  Source face")
+    match_step_index = NumericProperty(1)
     match_has_results = BooleanProperty(False)
     verifying = BooleanProperty(False)
     face_tip_visible = BooleanProperty(True)
@@ -117,9 +118,10 @@ class FaceAiApp(MDApp):
     ready_to_match = BooleanProperty(False)
     is_desktop = BooleanProperty(False)
     is_wide = BooleanProperty(False)
-    nav_offset = NumericProperty(dp(232))
+    nav_offset = NumericProperty(dp(248))
     nav_collapsed = BooleanProperty(False)
     current_screen = StringProperty("initScreen")
+    current_page_title = StringProperty("Home")
     home_action_label = StringProperty("Start face engine")
     home_action_icon = StringProperty("play")
     app_version = StringProperty(__version__)
@@ -161,6 +163,10 @@ class FaceAiApp(MDApp):
         self.sec_uix = None
         self.camera = None
         self.camera_card = None
+        self._camera_configured = False
+        self._camera_status_bound = False
+        self._camera_holder = None
+        self._camera_stop_event = None
         self.sec_name_input = None
         self.db_conn_ok = False
         self.data_in_db = False
@@ -244,7 +250,7 @@ class FaceAiApp(MDApp):
         if scrim is not None:
             Animation.cancel_all(scrim)
         if self.is_wide:
-            panel.width = dp(76) if self.nav_collapsed else dp(232)
+            panel.width = dp(80) if self.nav_collapsed else dp(248)
             self.nav_offset = panel.width
             panel.x = 0
             panel.disabled = False
@@ -253,7 +259,7 @@ class FaceAiApp(MDApp):
                 scrim.opacity = 0
                 scrim.disabled = True
         else:
-            panel.width = dp(232)
+            panel.width = dp(248)
             self.nav_offset = 0
             panel.disabled = False
             if not self._drawer_open:
@@ -414,6 +420,14 @@ class FaceAiApp(MDApp):
             pass
         self.root.ids.screen_manager.current = name
         self.current_screen = name
+        self.current_page_title = {
+            "initScreen": "Home",
+            "accessScr": "Door Access",
+            "peopleScr": "People",
+            "faceFindScr": "Face Finder",
+            "securityScr": "Secure Vault",
+            "settingsScr": "Settings",
+        }.get(name, "Home")
         self._set_nav_selection(name)
         if self._drawer_open:
             self.close_drawer()
@@ -517,7 +531,10 @@ class FaceAiApp(MDApp):
         self.reset_access_result()
         card = self._access_camera_card()
         if card is not None:
-            self._attach_camera_to_card(card)
+            if self.services_running:
+                self._attach_camera_to_card(card)
+            else:
+                card.status = "Engine off"
         self._scroll_access(0.35 if self.access_mode == "register" else 1.0)
         if not self.services_running:
             self.show_toast_msg("Start the face engine to scan or register.", is_error=True)
@@ -1290,7 +1307,7 @@ class FaceAiApp(MDApp):
             )
 
     def goto_face_matcher(self, instance=None):
-        self.root.ids.screen_manager.current = "faceFindScr"
+        self.goto_screen("faceFindScr")
 
     def dismiss_face_tip(self, instance=None):
         self.face_tip_visible = False
@@ -1360,14 +1377,19 @@ class FaceAiApp(MDApp):
 
     def update_match_step(self):
         if self.is_onnx_running:
+            self.match_step_index = 3
             self.match_step_text = "3/4  -  Matching..."
         elif self.match_has_results:
+            self.match_step_index = 4
             self.match_step_text = "4/4  -  Inspect results"
         elif self.src_image_path and self.trgt_image_path:
+            self.match_step_index = 3
             self.match_step_text = "3/4  -  Run match"
         elif self.src_image_path:
+            self.match_step_index = 2
             self.match_step_text = "2/4  -  Add target"
         else:
+            self.match_step_index = 1
             self.match_step_text = "1/4  -  Source face"
 
     def update_ready_to_match(self):
@@ -1696,17 +1718,25 @@ class FaceAiApp(MDApp):
 
     # Security section starts here
     def on_security_enter(self):
+        self.verifying = False
+        self.on_security_leave()  # clear existing things and lock
+        self.sec_uix = self.root.ids.security_box.ids.sec_elements_box
         permissions_ok = self.check_request_total_permission()
         if not permissions_ok:
+            self._show_vault_notice(
+                "Camera access needed",
+                "Allow camera access in your system settings, then return to the vault.",
+                icon="camera-off-outline",
+            )
             return
         if not self.face_ai or not self.services_running:
-            self.show_toast_msg("Start the face engine first.", is_error=True, duration=2)
-            self.root.ids.screen_manager.current = "initScreen"
-            self.current_screen = "initScreen"
+            self._show_vault_notice(
+                "Vault is locked",
+                "Start the face engine to unlock your encrypted files. Nothing leaves this device.",
+                icon="shield-lock-outline",
+                offer_start=True,
+            )
             return
-        self.verifying = False
-        self.on_security_leave()  # clear existing things
-        self.sec_uix = self.root.ids.security_box.ids.sec_elements_box
         self.db_conn_ok = self.face_ai.start_db_session(self.db_path)
         if not self.db_conn_ok:
             self.sec_uix.add_widget(
@@ -1726,6 +1756,87 @@ class FaceAiApp(MDApp):
         Clock.schedule_once(
             lambda dt: self.face_ai.check_if_data_exist(self._init_security_callback)
         )
+
+    def _show_vault_notice(self, title, detail, icon="information-outline", offer_start=False):
+        from kivymd.uix.label import MDIcon
+
+        self.sec_uix.clear_widgets()
+        width = min(Window.width - dp(48), dp(560))
+        card = AppCard(
+            orientation="vertical",
+            size_hint=(None, None),
+            size=(width, dp(292)),
+            padding=dp(24),
+            spacing=dp(10),
+        )
+        badge = IconBadge(icon=icon, size=(dp(48), dp(48)), size_hint=(None, None))
+        card.add_widget(badge)
+        title_label = MDLabel(
+            text=title,
+            font_size=sp(21),
+            bold=True,
+            size_hint_y=None,
+            height=dp(30),
+            theme_text_color="Custom",
+            text_color=get_color_from_hex(theme.text),
+        )
+        card.add_widget(title_label)
+        detail_label = MDLabel(
+            text=detail,
+            font_size=sp(12),
+            size_hint_y=None,
+            height=dp(46),
+            text_size=(width - dp(48), None),
+            theme_text_color="Custom",
+            text_color=get_color_from_hex(theme.muted),
+        )
+        card.add_widget(detail_label)
+        if offer_start:
+            start = MDFillRoundFlatIconButton(
+                text="Start face engine",
+                icon="power",
+                font_size=sp(12),
+                size_hint=(None, None),
+                size=(dp(210), dp(44)),
+                md_bg_color=get_color_from_hex(theme.primary),
+                theme_text_color="Custom",
+                text_color=get_color_from_hex(theme.text_on_primary),
+                theme_icon_color="Custom",
+                icon_color=get_color_from_hex(theme.text_on_primary),
+            )
+            start.bind(on_release=lambda inst: self.start_engine_for_vault())
+            card.add_widget(start)
+        card.add_widget(Widget())
+        note = MDLabel(
+            text="Files stay encrypted while the engine is off.",
+            font_size=sp(10),
+            size_hint_y=None,
+            height=dp(18),
+            theme_text_color="Custom",
+            text_color=get_color_from_hex(theme.muted),
+        )
+        card.add_widget(note)
+        row = MDBoxLayout(orientation="horizontal", size_hint_y=None, height=dp(308))
+        row.add_widget(Widget())
+        row.add_widget(card)
+        row.add_widget(Widget())
+        self.sec_uix.add_widget(row)
+        self.sec_uix.add_widget(Widget())
+
+    def start_engine_for_vault(self, instance=None):
+        self.start_face_services()
+        self._vault_engine_attempts = 0
+        Clock.schedule_once(self._wait_for_vault_engine, 0.4)
+
+    def _wait_for_vault_engine(self, dt=None):
+        if self.current_screen != "securityScr":
+            return
+        if self.services_running:
+            self.on_security_enter()
+            return
+        self._vault_engine_attempts = getattr(self, "_vault_engine_attempts", 0) + 1
+        if self._vault_engine_attempts < 25:
+            Clock.schedule_once(self._wait_for_vault_engine, 0.4)
 
     def android_front_cam(self):
         from services.androidSvc import AndroidSvc
@@ -1777,16 +1888,9 @@ class FaceAiApp(MDApp):
             self.show_toast_msg("No camera found on this device.", is_error=True)
             return card
         try:
-            if platform != "android" and self.camera:
-                # AVFoundation may hand back a sideways texture on macOS; a
-                # fresh widget keeps the rotation transform from stacking.
-                try:
-                    self.camera.play = False
-                except Exception:
-                    pass
-                if self.camera.parent:
-                    self.camera.parent.remove_widget(self.camera)
-                self.camera = None
+            if self._camera_stop_event is not None:
+                Clock.unschedule(self._camera_stop_event)
+                self._camera_stop_event = None
             if not self.camera:
                 self.camera = Camera(
                     index=cam_indx,
@@ -1795,25 +1899,34 @@ class FaceAiApp(MDApp):
                     play=True,
                 )
             else:
+                # Reuse the one AVFoundation camera. Tearing down and
+                # recreating it on every navigation was unstable on macOS.
+                if self.camera.parent:
+                    self.camera.parent.remove_widget(self.camera)
                 self.camera.play = True
-            if self.camera.parent:
-                self.camera.parent.remove_widget(self.camera)
             holder = card.ids.cam_holder
+            self._camera_holder = holder
             if platform == "android":
                 self.camera.size_hint = (1, 1)
             else:
                 self.camera.size_hint = (None, None)
                 self.camera.fit_mode = "fill"
-                with self.camera.canvas.before:
-                    PushMatrix()
-                    self._camera_rotate = Rotate(angle=-90, origin=self.camera.center)
-                with self.camera.canvas.after:
-                    PopMatrix()
+                if not self._camera_configured:
+                    with self.camera.canvas.before:
+                        PushMatrix()
+                        self._camera_rotate = Rotate(
+                            angle=-90, origin=self.camera.center
+                        )
+                    with self.camera.canvas.after:
+                        PopMatrix()
+                    self._camera_configured = True
                 holder.bind(size=lambda *a: self._fit_rotated_camera(holder))
                 Clock.schedule_once(lambda dt: self._fit_rotated_camera(holder))
             holder.add_widget(self.camera)
             card.status = "LIVE" if self.camera.texture else "Starting..."
-            self.camera.bind(texture=lambda *a: self._refresh_camera_status(card))
+            if not self._camera_status_bound:
+                self.camera.bind(texture=self._on_camera_texture)
+                self._camera_status_bound = True
             Clock.schedule_once(lambda dt: self._refresh_camera_status(card), 1.2)
         except Exception as e:
             print(f"Error setting up the camera: {e}")
@@ -1821,8 +1934,13 @@ class FaceAiApp(MDApp):
             self.show_toast_msg("The camera could not be started.", is_error=True)
         return card
 
+    def _on_camera_texture(self, instance, texture):
+        self._refresh_camera_status(self.camera_card)
+
     def _fit_rotated_camera(self, holder):
         if platform == "android" or not self.camera:
+            return
+        if holder is not self._camera_holder:
             return
         margin = dp(10)
         inner_w = max(dp(40), holder.width - 2 * margin)
@@ -1836,16 +1954,29 @@ class FaceAiApp(MDApp):
             rotate.origin = self.camera.center
 
     def stop_camera(self):
+        self._camera_holder = None
+        if self.camera:
+            if self.camera.parent:
+                self.camera.parent.remove_widget(self.camera)
+            if self._camera_stop_event is not None:
+                Clock.unschedule(self._camera_stop_event)
+            # Give AVFoundation time to finish startRunning before asking it
+            # to stop, and keep the single camera instance alive.
+            self._camera_stop_event = Clock.schedule_once(
+                self._really_stop_camera, 1.2
+            )
+        self.camera_card = None
+        self.verifying = False
+
+    def _really_stop_camera(self, dt=None):
+        self._camera_stop_event = None
+        if self.camera_card is not None:
+            return
         if self.camera:
             try:
                 self.camera.play = False
-            except Exception:
-                pass
-            if self.camera.parent:
-                self.camera.parent.remove_widget(self.camera)
-            self.camera = None
-        self.camera_card = None
-        self.verifying = False
+            except Exception as e:
+                print(f"Could not stop the camera cleanly: {e}")
 
     def _capture_bgr_frame(self):
         if not self.camera or not self.camera.texture:
@@ -2229,6 +2360,7 @@ class FaceAiApp(MDApp):
         self.stop_camera()
         # Leaving the vault re-locks it; face auth is required on re-entry.
         self.login_success = False
+        self.sec_file_box = None
         if self.sec_uix:
             self.sec_uix.clear_widgets()
 

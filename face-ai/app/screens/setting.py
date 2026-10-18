@@ -29,21 +29,21 @@ Builder.load_string('''
             orientation: "vertical"
             adaptive_height: True
             spacing: dp(12)
-            padding: dp(20), dp(14), dp(20), dp(14)
+            padding: dp(24), dp(18), dp(24), dp(18)
 
             MDLabel:
                 text: "Settings & help"
-                font_size: sp(20)
+                font_size: sp(28)
                 bold: True
                 size_hint_y: None
-                height: dp(30)
+                height: dp(36)
                 theme_text_color: "Custom"
                 text_color: theme.text
             MDLabel:
                 text: "Manage storage, review privacy and reach the developer."
-                font_size: sp(11)
+                font_size: sp(12)
                 size_hint_y: None
-                height: dp(18)
+                height: dp(20)
                 theme_text_color: "Custom"
                 text_color: theme.muted
 
@@ -68,13 +68,13 @@ Builder.load_string('''
                     icon: "broom"
                     tint: theme.warning_soft
                     fg: theme.warning
-                    title: "Delete generated images"
+                    title: "Delete images" if not app.is_wide else "Delete generated images"
                     subtitle: app.output_count_label
                     on_release: app.show_all_delete_alert()
 
                 SettingsRow:
                     icon: "folder-open-outline"
-                    title: "Open app data folder"
+                    title: "Open data folder" if not app.is_wide else "Open app data folder"
                     subtitle: "Models, vault and generated results"
                     disabled: not app.is_desktop
                     on_release: app.open_data_folder()
@@ -134,13 +134,13 @@ Builder.load_string('''
 
                 SettingsRow:
                     icon: "file-cog-outline"
-                    title: "Door controller config"
+                    title: "Controller config" if not app.is_wide else "Door controller config"
                     subtitle: "Edit controller, webhook URL, secret and threshold"
                     on_release: app.open_door_config()
 
                 SettingsRow:
                     icon: "refresh"
-                    title: "Reload door config"
+                    title: "Reload config" if not app.is_wide else "Reload door config"
                     subtitle: "Apply changes without restarting the app"
                     on_release: app.reload_door_config()
 

@@ -9,8 +9,8 @@ from kivymd.uix.boxlayout import MDBoxLayout
 from screens.ui import (  # noqa: F401
     AppCard,
     EmptyState,
-    FeatureChip,
     IconBadge,
+    QuickAction,
     StatusPill,
 )
 
@@ -19,8 +19,8 @@ Builder.load_string('''
 #:import theme screens.palette.theme
 #:import AppCard screens.ui.AppCard
 #:import EmptyState screens.ui.EmptyState
-#:import FeatureChip screens.ui.FeatureChip
 #:import IconBadge screens.ui.IconBadge
+#:import QuickAction screens.ui.QuickAction
 #:import StatusPill screens.ui.StatusPill
 
 
@@ -37,27 +37,28 @@ Builder.load_string('''
         MDBoxLayout:
             orientation: "vertical"
             adaptive_height: True
-            spacing: dp(16)
+            spacing: dp(18)
             padding: dp(24), dp(18), dp(24), dp(18)
 
             # --- page header --------------------------------------------
             MDBoxLayout:
                 size_hint_y: None
-                height: dp(42)
+                height: dp(48)
+                spacing: dp(8)
                 MDBoxLayout:
                     orientation: "vertical"
                     size_hint_y: None
-                    height: dp(42)
-                    spacing: dp(0)
+                    height: dp(48)
+                    spacing: 0
                     MDLabel:
                         text: "Home"
-                        font_size: sp(22)
+                        font_size: sp(28)
                         bold: True
                         theme_text_color: "Custom"
                         text_color: theme.text
                     MDLabel:
                         text: "Your private face workspace" if app.is_wide else "Private face workspace"
-                        font_size: sp(11)
+                        font_size: sp(12)
                         theme_text_color: "Custom"
                         text_color: theme.muted
                 StatusPill:
@@ -67,184 +68,6 @@ Builder.load_string('''
                     fg: theme.primary_text
                     pos_hint: {"center_y": .5}
 
-            # --- hero ----------------------------------------------------
-            MDCard:
-                orientation: "vertical"
-                size_hint_y: None
-                height: dp(154)
-                padding: dp(20)
-                radius: [dp(22)]
-                elevation: 0
-                md_bg_color: theme.primary
-                border_color: theme.transparent
-
-                MDBoxLayout:
-                    size_hint_y: None
-                    height: dp(54)
-                    spacing: dp(14)
-                    MDCard:
-                        size_hint: None, None
-                        size: dp(52), dp(52)
-                        radius: [dp(15)]
-                        elevation: 0
-                        md_bg_color: theme.white_18
-                        border_color: theme.transparent
-                        MDIcon:
-                            icon: "face-recognition"
-                            theme_text_color: "Custom"
-                            text_color: theme.text_on_primary
-                            font_size: sp(28)
-                            pos_hint: {"center_x": .5, "center_y": .5}
-                    MDBoxLayout:
-                        orientation: "vertical"
-                        size_hint_y: None
-                        height: dp(46)
-                        spacing: dp(1)
-                        pos_hint: {"center_y": .5}
-                        MDLabel:
-                            text: "Welcome to Face AI"
-                            font_size: sp(19)
-                            bold: True
-                            theme_text_color: "Custom"
-                            text_color: theme.text_on_primary
-                        MDLabel:
-                            text: "Detect, match and unlock - all on this device."
-                            font_size: sp(11)
-                            theme_text_color: "Custom"
-                            text_color: theme.text_on_primary_soft
-
-                Widget:
-                    size_hint_y: 1
-
-                MDBoxLayout:
-                    size_hint_y: None
-                    height: dp(42)
-                    spacing: dp(10)
-                    MDFillRoundFlatIconButton:
-                        text: app.home_action_label
-                        icon: app.home_action_icon
-                        font_size: sp(12)
-                        size_hint: None, None
-                        size: dp(196), dp(42)
-                        md_bg_color: 1, 1, 1, 1
-                        theme_text_color: "Custom"
-                        text_color: theme.primary_dark
-                        theme_icon_color: "Custom"
-                        icon_color: theme.primary_dark
-                        disabled: app.download_active
-                        on_release: app.home_action()
-                    Widget:
-                    FeatureChip:
-                        text: "100% offline"
-                        icon: "wifi-off"
-                        width: self.pill_width if app.is_wide else 0
-                        opacity: 1 if app.is_wide else 0
-                    FeatureChip:
-                        text: "Encrypted vault"
-                        icon: "shield-lock-outline"
-                        width: self.pill_width if app.is_wide else 0
-                        opacity: 1 if app.is_wide else 0
-
-            # --- status cards -------------------------------------------
-            MDGridLayout:
-                cols: 3 if app.is_wide else 1
-                spacing: dp(12)
-                size_hint_y: None
-                height: dp(94) if app.is_wide else dp(306)
-
-                AppCard:
-                    orientation: "horizontal"
-                    padding: dp(14)
-                    spacing: dp(12)
-                    IconBadge:
-                        icon: "cube-outline"
-                        bg: theme.primary_soft
-                        fg: theme.primary_text
-                        size: dp(38), dp(38)
-                        pos_hint: {"center_y": .5}
-                    MDBoxLayout:
-                        orientation: "vertical"
-                        size_hint_y: None
-                        height: dp(42)
-                        spacing: dp(1)
-                        pos_hint: {"center_y": .5}
-                        MDLabel:
-                            text: "Models"
-                            font_size: sp(11)
-                            theme_text_color: "Custom"
-                            text_color: theme.muted
-                        MDLabel:
-                            text: "Ready" if app.models_ready else "Missing"
-                            font_size: sp(16)
-                            bold: True
-                            theme_text_color: "Custom"
-                            text_color: theme.success if app.models_ready else theme.warning
-
-                AppCard:
-                    orientation: "horizontal"
-                    padding: dp(14)
-                    spacing: dp(12)
-                    IconBadge:
-                        icon: "brain"
-                        bg: theme.success_soft
-                        fg: theme.success
-                        size: dp(38), dp(38)
-                        pos_hint: {"center_y": .5}
-                    MDBoxLayout:
-                        orientation: "vertical"
-                        size_hint_y: None
-                        height: dp(42)
-                        spacing: dp(1)
-                        pos_hint: {"center_y": .5}
-                        MDLabel:
-                            text: "Face engine"
-                            font_size: sp(11)
-                            theme_text_color: "Custom"
-                            text_color: theme.muted
-                        MDLabel:
-                            text: "Running" if app.services_running else "Stopped"
-                            font_size: sp(16)
-                            bold: True
-                            theme_text_color: "Custom"
-                            text_color: theme.success if app.services_running else theme.muted
-
-                AppCard:
-                    orientation: "horizontal"
-                    padding: dp(14)
-                    spacing: dp(12)
-                    on_release: app.goto_screen("securityScr")
-                    IconBadge:
-                        icon: "shield-lock-outline"
-                        bg: theme.primary_soft
-                        fg: theme.primary_text
-                        size: dp(38), dp(38)
-                        pos_hint: {"center_y": .5}
-                    MDBoxLayout:
-                        orientation: "vertical"
-                        size_hint_y: None
-                        height: dp(42)
-                        spacing: dp(1)
-                        pos_hint: {"center_y": .5}
-                        MDLabel:
-                            text: "Secure vault  -  encrypted at rest"
-                            font_size: sp(10)
-                            theme_text_color: "Custom"
-                            text_color: theme.muted
-                        MDLabel:
-                            text: "Unlocked" if app.login_success else "Locked"
-                            font_size: sp(16)
-                            bold: True
-                            theme_text_color: "Custom"
-                            text_color: theme.success if app.login_success else theme.text
-                    MDIcon:
-                        icon: "chevron-right"
-                        theme_text_color: "Custom"
-                        text_color: theme.muted
-                        font_size: sp(18)
-                        size_hint: None, None
-                        size: dp(20), dp(20)
-                        pos_hint: {"center_y": .5}
-
             # --- first-run setup ----------------------------------------
             AppCard:
                 orientation: "vertical"
@@ -252,6 +75,7 @@ Builder.load_string('''
                 height: self.minimum_height if not app.models_ready else 0
                 opacity: 1 if not app.models_ready else 0
                 disabled: app.models_ready
+                padding: dp(18)
                 spacing: dp(10)
 
                 MDBoxLayout:
@@ -259,7 +83,7 @@ Builder.load_string('''
                     height: dp(22)
                     MDLabel:
                         text: "First-time setup"
-                        font_size: sp(15)
+                        font_size: sp(16)
                         bold: True
                         theme_text_color: "Custom"
                         text_color: theme.text
@@ -306,6 +130,225 @@ Builder.load_string('''
                         theme_text_color: "Custom"
                         text_color: theme.muted
 
+            # --- engine command card ------------------------------------
+            AppCard:
+                orientation: "vertical"
+                size_hint_y: None
+                height: dp(290) if app.is_wide else dp(346)
+                padding: dp(22)
+                spacing: dp(10)
+
+                MDBoxLayout:
+                    size_hint_y: None
+                    height: dp(42)
+                    spacing: dp(12)
+                    IconBadge:
+                        icon: "face-recognition"
+                        bg: theme.primary_soft
+                        fg: theme.primary_text
+                        size: dp(42), dp(42)
+                        pos_hint: {"center_y": .5}
+                    MDBoxLayout:
+                        orientation: "vertical"
+                        size_hint_y: None
+                        height: dp(40)
+                        spacing: dp(1)
+                        pos_hint: {"center_y": .5}
+                        MDLabel:
+                            text: "Face engine"
+                            font_size: sp(13)
+                            bold: True
+                            theme_text_color: "Custom"
+                            text_color: theme.text
+                        MDLabel:
+                            text: "On-device matching"
+                            font_size: sp(10)
+                            theme_text_color: "Custom"
+                            text_color: theme.muted
+                    Widget:
+                    StatusPill:
+                        text: "Running" if app.services_running else "Off"
+                        icon: "check-circle-outline" if app.services_running else "power"
+                        bg: theme.success_soft if app.services_running else theme.surface
+                        fg: theme.success if app.services_running else theme.muted
+                        opacity: 1 if app.is_wide else 0
+                        width: self.pill_width if app.is_wide else 0
+                        size_hint_x: None
+                        pos_hint: {"center_y": .5}
+
+                MDLabel:
+                    text: ("Ready for a local match" if app.services_running else ("Set up local recognition" if not app.models_ready else "Start your face engine"))
+                    font_size: sp(24) if app.is_wide else sp(21)
+                    bold: True
+                    size_hint_y: None
+                    height: dp(32)
+                    theme_text_color: "Custom"
+                    text_color: theme.text
+
+                MDLabel:
+                    text: "Detect, match and unlock without sending a frame off this device."
+                    font_size: sp(12)
+                    size_hint_y: None
+                    height: dp(34)
+                    text_size: self.width, None
+                    theme_text_color: "Custom"
+                    text_color: theme.muted
+
+                MDBoxLayout:
+                    size_hint_y: None
+                    height: dp(42)
+                    spacing: dp(10)
+                    MDFillRoundFlatIconButton:
+                        text: app.home_action_label
+                        icon: app.home_action_icon
+                        font_size: sp(12)
+                        size_hint: None, None
+                        size: dp(204), dp(42)
+                        disabled: app.download_active
+                        on_release: app.home_action()
+                    MDFillRoundFlatIconButton:
+                        text: "Open vault"
+                        icon: "shield-lock-outline"
+                        font_size: sp(12)
+                        size_hint: None, None
+                        size: dp(150), dp(42)
+                        md_bg_color: theme.primary_soft
+                        theme_text_color: "Custom"
+                        text_color: theme.primary_text
+                        theme_icon_color: "Custom"
+                        icon_color: theme.primary_text
+                        opacity: 1 if app.is_wide else 0
+                        disabled: not app.is_wide
+                        width: dp(150) if app.is_wide else 0
+                        on_release: app.goto_screen("securityScr")
+                    Widget:
+
+                MDGridLayout:
+                    cols: 4 if app.is_wide else 2
+                    spacing: dp(8)
+                    size_hint_y: None
+                    height: dp(44) if app.is_wide else dp(84)
+
+                    MDBoxLayout:
+                        orientation: "vertical"
+                        size_hint_y: None
+                        height: dp(36)
+                        spacing: 0
+                        pos_hint: {"center_y": .5}
+                        MDLabel:
+                            text: "MODELS"
+                            font_size: sp(8)
+                            bold: True
+                            theme_text_color: "Custom"
+                            text_color: theme.muted
+                        MDLabel:
+                            text: "Ready" if app.models_ready else "Missing"
+                            font_size: sp(12)
+                            bold: True
+                            theme_text_color: "Custom"
+                            text_color: theme.success if app.models_ready else theme.warning
+
+                    MDBoxLayout:
+                        orientation: "vertical"
+                        size_hint_y: None
+                        height: dp(36)
+                        spacing: 0
+                        pos_hint: {"center_y": .5}
+                        MDLabel:
+                            text: "ENGINE"
+                            font_size: sp(8)
+                            bold: True
+                            theme_text_color: "Custom"
+                            text_color: theme.muted
+                        MDLabel:
+                            text: "Running" if app.services_running else "Stopped"
+                            font_size: sp(12)
+                            bold: True
+                            theme_text_color: "Custom"
+                            text_color: theme.success if app.services_running else theme.muted
+
+                    MDBoxLayout:
+                        orientation: "vertical"
+                        size_hint_y: None
+                        height: dp(36)
+                        spacing: 0
+                        pos_hint: {"center_y": .5}
+                        MDLabel:
+                            text: "VAULT"
+                            font_size: sp(8)
+                            bold: True
+                            theme_text_color: "Custom"
+                            text_color: theme.muted
+                        MDLabel:
+                            text: "Unlocked" if app.login_success else "Locked"
+                            font_size: sp(12)
+                            bold: True
+                            theme_text_color: "Custom"
+                            text_color: theme.success if app.login_success else theme.text
+
+                    MDBoxLayout:
+                        orientation: "vertical"
+                        size_hint_y: None
+                        height: dp(36)
+                        spacing: 0
+                        pos_hint: {"center_y": .5}
+                        MDLabel:
+                            text: "DATA"
+                            font_size: sp(8)
+                            bold: True
+                            theme_text_color: "Custom"
+                            text_color: theme.muted
+                        MDLabel:
+                            text: "On device"
+                            font_size: sp(12)
+                            bold: True
+                            theme_text_color: "Custom"
+                            text_color: theme.text
+
+            # --- quick actions ------------------------------------------
+            MDBoxLayout:
+                orientation: "vertical"
+                size_hint_y: None
+                height: self.minimum_height
+                spacing: dp(10)
+                MDLabel:
+                    text: "Quick actions"
+                    font_size: sp(16)
+                    bold: True
+                    size_hint_y: None
+                    height: dp(24)
+                    theme_text_color: "Custom"
+                    text_color: theme.text
+                MDGridLayout:
+                    cols: 4 if app.is_wide else (2 if Window.width >= 360 else 1)
+                    spacing: dp(10)
+                    size_hint_y: None
+                    height: dp(100) if app.is_wide else (dp(210) if Window.width >= 360 else dp(430))
+                    QuickAction:
+                        icon: "account-search-outline"
+                        title: "Face Finder"
+                        subtitle: "Match two photos"
+                        on_release: app.goto_screen("faceFindScr")
+                    QuickAction:
+                        icon: "shield-lock-outline"
+                        title: "Secure Vault"
+                        subtitle: "Encrypted files"
+                        on_release: app.goto_screen("securityScr")
+                    QuickAction:
+                        icon: "door-open"
+                        title: "Door Access"
+                        subtitle: "Scan to unlock"
+                        tint: theme.success_soft
+                        fg: theme.success
+                        on_release: app.goto_screen("accessScr")
+                    QuickAction:
+                        icon: "account-group-outline"
+                        title: "People"
+                        subtitle: "Registry and audit"
+                        tint: theme.warning_soft
+                        fg: theme.warning
+                        on_release: app.goto_screen("peopleScr")
+
             # --- recent matches -----------------------------------------
             MDBoxLayout:
                 orientation: "vertical"
@@ -315,10 +358,10 @@ Builder.load_string('''
 
                 MDBoxLayout:
                     size_hint_y: None
-                    height: dp(26)
+                    height: dp(28)
                     MDLabel:
                         text: "Recent matches"
-                        font_size: sp(15)
+                        font_size: sp(16)
                         bold: True
                         theme_text_color: "Custom"
                         text_color: theme.text
@@ -366,7 +409,7 @@ Builder.load_string('''
                 IconBadge:
                     icon: "folder-lock-outline"
                     bg: theme.primary_soft
-                    fg: theme.muted
+                    fg: theme.primary_text
                     size: dp(34), dp(34)
                     pos_hint: {"center_y": .5}
                 MDBoxLayout:

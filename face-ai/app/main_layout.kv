@@ -1,6 +1,7 @@
 # main_layout.kv
 ## import local components
 #:import theme screens.palette.theme
+#:import parse_color kivy.parser.parse_color
 #:import FadeTransition kivy.uix.screenmanager.FadeTransition
 #:import FaceMatchBox screens.face_match.FaceMatchBox
 #:import SettingsBox screens.setting.SettingsBox
@@ -10,7 +11,7 @@
 #:import PeopleBox screens.people.PeopleBox
 #:import NavigationMenu screens.navigation.NavigationMenu
 #:import CompactNav screens.navigation.CompactNav
-#:import StatusPill screens.ui.StatusPill
+#:import TooltipMDIconButton screens.ui.TooltipMDIconButton
 
 ## Main screen
 MDScreen:
@@ -21,149 +22,154 @@ MDScreen:
         padding: 0, self.top_pad, 0, 0
         spacing: 0
 
-        # --- top app bar ------------------------------------------------
-        MDBoxLayout:
-            orientation: "horizontal"
-            size_hint_y: None
-            height: dp(60)
-            md_bg_color: theme.primary
-            padding: dp(6), 0, dp(8), 0
-            spacing: dp(6)
-
-            MDIconButton:
-                icon: "menu"
-                theme_icon_color: "Custom"
-                icon_color: 1, 1, 1, 1
-                opacity: 0 if app.is_wide else 1
-                disabled: app.is_wide
-                on_release: app.open_drawer()
-
-            MDCard:
-                size_hint: None, None
-                size: dp(32), dp(32)
-                radius: [dp(10)]
-                elevation: 0
-                md_bg_color: theme.white_18
-                border_color: theme.transparent
-                pos_hint: {"center_y": .5}
-                MDIcon:
-                    icon: "face-recognition"
-                    theme_text_color: "Custom"
-                    text_color: 1, 1, 1, 1
-                    font_size: sp(18)
-                    pos_hint: {"center_x": .5, "center_y": .5}
-
-            MDBoxLayout:
-                orientation: "vertical"
-                size_hint_y: None
-                height: dp(38)
-                spacing: -dp(1)
-                pos_hint: {"center_y": .5}
-
-                MDLabel:
-                    text: "Face AI"
-                    font_size: sp(17)
-                    bold: True
-                    theme_text_color: "Custom"
-                    text_color: 1, 1, 1, 1
-                MDLabel:
-                    text: "Offline face recognition" if app.is_wide else "Offline"
-                    font_size: sp(9)
-                    theme_text_color: "Custom"
-                    text_color: 1, 1, 1, .72
-
-            Widget:
-
-            MDIconButton:
-                icon: "chevron-left" if not app.nav_collapsed else "chevron-right"
-                theme_icon_color: "Custom"
-                icon_color: 1, 1, 1, 1
-                opacity: 1 if app.is_wide else 0
-                disabled: not app.is_wide
-                width: dp(40) if app.is_wide else 0
-                size_hint_x: None
-                on_release: app.toggle_nav_collapse()
-
-            StatusPill:
-                text: "Engine running" if app.services_running else "Engine stopped"
-                icon: "play-circle-outline"
-                bg: theme.success_soft if app.services_running else theme.white_18
-                fg: theme.success if app.services_running else "#FFFFFF"
-                opacity: 1 if app.is_wide else 0
-                disabled: not app.is_wide
-                width: self.pill_width if app.is_wide else 0
-                size_hint_x: None
-                pos_hint: {"center_y": .5}
-
-            MDIconButton:
-                icon: "weather-night" if not app.theme_dark else "white-balance-sunny"
-                theme_icon_color: "Custom"
-                icon_color: 1, 1, 1, 1
-                on_release: app.toggle_theme()
-
-            MDIconButton:
-                icon: "help-circle-outline"
-                theme_icon_color: "Custom"
-                icon_color: 1, 1, 1, 1
-                on_release: app.show_help_dialog()
-
-        # --- navigation panel + content ---------------------------------
         RelativeLayout:
             id: shell
 
-            MDScreenManager:
-                id: screen_manager
+            # --- content: slim context bar + routed screens ----------------
+            MDBoxLayout:
+                id: content_shell
+                orientation: "vertical"
                 size_hint: None, None
                 x: app.nav_offset
                 y: 0
                 width: shell.width - app.nav_offset
                 height: shell.height
-                transition: FadeTransition(duration=.14)
 
-                MDScreen:
-                    name: "initScreen"
+                MDBoxLayout:
+                    orientation: "horizontal"
+                    size_hint_y: None
+                    height: dp(58)
+                    padding: dp(8) if not app.is_wide else dp(16), 0, dp(10), 0
+                    spacing: dp(8)
                     md_bg_color: theme.surface
-                    on_enter: app.refresh_recent_outputs()
-                    InitBox:
-                        id: init_screen
+                    canvas.after:
+                        Color:
+                            rgba: parse_color(theme.line)
+                        Line:
+                            points: self.x, self.y, self.right, self.y
 
-                MDScreen:
-                    name: "accessScr"
-                    md_bg_color: theme.surface
-                    on_enter: app.on_access_enter()
-                    on_leave: app.on_access_leave()
-                    AccessBox:
-                        id: access_box
+                    MDBoxLayout:
+                        size_hint_x: None
+                        width: dp(44) if not app.is_wide else 0
+                        disabled: app.is_wide
+                        MDIconButton:
+                            icon: "menu"
+                            icon_size: dp(22)
+                            theme_icon_color: "Custom"
+                            icon_color: theme.text
+                            opacity: 1 if not app.is_wide else 0
+                            disabled: app.is_wide
+                            on_release: app.open_drawer()
 
-                MDScreen:
-                    name: "peopleScr"
-                    md_bg_color: theme.surface
-                    on_enter: app.on_people_enter()
-                    PeopleBox:
-                        id: people_box
+                    MDBoxLayout:
+                        orientation: "vertical"
+                        size_hint_y: None
+                        height: dp(40)
+                        spacing: 0
+                        pos_hint: {"center_y": .5}
+                        MDLabel:
+                            text: "LOCAL WORKSPACE"
+                            font_size: sp(9)
+                            bold: True
+                            size_hint_y: None
+                            height: dp(11) if app.is_wide else 0
+                            opacity: 1 if app.is_wide else 0
+                            theme_text_color: "Custom"
+                            text_color: theme.muted
+                        MDLabel:
+                            text: app.current_page_title if app.is_wide else "Face AI"
+                            font_size: sp(14)
+                            bold: True
+                            theme_text_color: "Custom"
+                            text_color: theme.text
 
-                MDScreen:
-                    name: "faceFindScr"
-                    md_bg_color: theme.surface
-                    on_enter: app.on_face_matcher_entry()
-                    FaceMatchBox:
-                        id: face_match_scr
+                    Widget:
+                        size_hint_x: 1 if app.is_wide else 0
+                        width: 0 if not app.is_wide else 1
 
-                MDScreen:
-                    name: "securityScr"
-                    md_bg_color: theme.surface
-                    on_enter: app.on_security_enter()
-                    on_leave: app.on_security_leave()
-                    SecurityBox:
-                        id: security_box
+                    MDBoxLayout:
+                        size_hint_x: None
+                        width: dp(122) if app.is_wide else dp(76)
+                        spacing: dp(6)
+                        pos_hint: {"center_y": .5}
+                        MDIcon:
+                            icon: "circle"
+                            font_size: sp(8)
+                            theme_text_color: "Custom"
+                            text_color: theme.success if app.services_running else theme.muted
+                            size_hint: None, None
+                            size: dp(10), dp(10)
+                            pos_hint: {"center_y": .5}
+                        MDLabel:
+                            text: "Engine on" if app.services_running else "Engine off"
+                            font_size: sp(9) if not app.is_wide else sp(10)
+                            theme_text_color: "Custom"
+                            text_color: theme.muted
 
-                MDScreen:
-                    name: "settingsScr"
-                    md_bg_color: theme.surface
-                    on_enter: app.refresh_output_count()
-                    SettingsBox:
-                        id: settings_box
+                    TooltipMDIconButton:
+                        icon: "weather-night" if not app.theme_dark else "white-balance-sunny"
+                        tooltip_text: "Switch theme"
+                        theme_icon_color: "Custom"
+                        icon_color: theme.muted
+                        on_release: app.toggle_theme()
 
+                    TooltipMDIconButton:
+                        icon: "help-circle-outline"
+                        tooltip_text: "Help and shortcuts"
+                        theme_icon_color: "Custom"
+                        icon_color: theme.muted
+                        on_release: app.show_help_dialog()
+
+                MDScreenManager:
+                    id: screen_manager
+                    size_hint: 1, 1
+                    transition: FadeTransition(duration=.14)
+
+                    MDScreen:
+                        name: "initScreen"
+                        md_bg_color: theme.surface
+                        on_enter: app.refresh_recent_outputs()
+                        InitBox:
+                            id: init_screen
+
+                    MDScreen:
+                        name: "accessScr"
+                        md_bg_color: theme.surface
+                        on_enter: app.on_access_enter()
+                        on_leave: app.on_access_leave()
+                        AccessBox:
+                            id: access_box
+
+                    MDScreen:
+                        name: "peopleScr"
+                        md_bg_color: theme.surface
+                        on_enter: app.on_people_enter()
+                        PeopleBox:
+                            id: people_box
+
+                    MDScreen:
+                        name: "faceFindScr"
+                        md_bg_color: theme.surface
+                        on_enter: app.on_face_matcher_entry()
+                        FaceMatchBox:
+                            id: face_match_scr
+
+                    MDScreen:
+                        name: "securityScr"
+                        md_bg_color: theme.surface
+                        on_enter: app.on_security_enter()
+                        on_leave: app.on_security_leave()
+                        SecurityBox:
+                            id: security_box
+
+                    MDScreen:
+                        name: "settingsScr"
+                        md_bg_color: theme.surface
+                        on_enter: app.refresh_output_count()
+                        SettingsBox:
+                            id: settings_box
+
+            # --- mobile scrim ---------------------------------------------
             MDCard:
                 id: drawer_scrim
                 size_hint: None, None
@@ -179,17 +185,23 @@ MDScreen:
                 disabled: True
                 on_release: app.close_drawer()
 
+            # --- full-height navigation panel -----------------------------
             MDCard:
                 id: nav_panel
                 size_hint: None, None
                 x: 0
                 y: 0
-                width: dp(76) if app.is_wide and app.nav_collapsed else dp(232)
+                width: dp(80) if app.is_wide and app.nav_collapsed else dp(248)
                 height: shell.height
                 radius: [0]
                 elevation: 0
                 md_bg_color: theme.card
-                border_color: theme.line
+                border_color: theme.transparent
+                canvas.after:
+                    Color:
+                        rgba: parse_color(theme.line)
+                    Line:
+                        points: self.right, self.y, self.right, self.top
 
                 FloatLayout:
                     pos: nav_panel.pos

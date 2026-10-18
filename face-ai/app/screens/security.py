@@ -33,10 +33,34 @@ Builder.load_string('''
     padding: 0, 0, 0, self.bottom_pad
 
     MDBoxLayout:
-        id: sec_elements_box
         orientation: "vertical"
-        padding: dp(16), dp(12), dp(16), dp(12)
-        spacing: dp(12)
+        padding: dp(24), dp(18), dp(24), dp(18)
+        spacing: dp(14)
+
+        MDBoxLayout:
+            size_hint_y: None
+            height: dp(58)
+            MDBoxLayout:
+                orientation: "vertical"
+                size_hint_y: None
+                height: dp(58)
+                spacing: 0
+                MDLabel:
+                    text: "Secure Vault"
+                    font_size: sp(28)
+                    bold: True
+                    theme_text_color: "Custom"
+                    text_color: theme.text
+                MDLabel:
+                    text: "Face-protected files, encrypted and stored only on this device."
+                    font_size: sp(12)
+                    theme_text_color: "Custom"
+                    text_color: theme.muted
+
+        MDBoxLayout:
+            id: sec_elements_box
+            orientation: "vertical"
+            spacing: dp(12)
 
 
 <SecSingleFile>:

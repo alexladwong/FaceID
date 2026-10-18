@@ -128,6 +128,30 @@ class NoticeCard(AppCard):
     fg = ColorProperty(theme.error)
 
 
+class StepChip(MDBoxLayout):
+    """One segment of the Face Finder progress strip."""
+
+    number = StringProperty("1")
+    label = StringProperty("Source")
+    active = BooleanProperty(False)
+
+
+class QuickAction(AppCard):
+    """Compact destination card used on the dashboard."""
+
+    icon = StringProperty("arrow-right")
+    title = StringProperty("")
+    subtitle = StringProperty("")
+    tint = ColorProperty(theme.primary_soft)
+    fg = ColorProperty(theme.primary_text)
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        # AppCard's own rule sets a vertical orientation; a destination tile
+        # is a horizontal icon + label + chevron row.
+        self.orientation = "horizontal"
+
+
 class UploadTile(AppCard):
     """Tappable image picker with a preview area."""
 
@@ -174,8 +198,90 @@ Builder.load_string('''
 #:import parse_color kivy.parser.parse_color
 
 
+<StepChip>:
+    orientation: "horizontal"
+    size_hint_y: None
+    height: dp(34)
+    padding: dp(7), 0
+    spacing: dp(6)
+    canvas.before:
+        Color:
+            rgba: parse_color(theme.primary_soft) if root.active else parse_color(theme.transparent)
+        RoundedRectangle:
+            pos: self.pos
+            size: self.size
+            radius: [dp(9)]
+    MDCard:
+        size_hint: None, None
+        size: dp(18), dp(18)
+        radius: [dp(9)]
+        elevation: 0
+        md_bg_color: theme.primary if root.active else theme.surface
+        border_color: theme.line if not root.active else theme.transparent
+        pos_hint: {"center_y": .5}
+        MDLabel:
+            text: root.number
+            font_size: sp(9)
+            bold: True
+            halign: "center"
+            valign: "middle"
+            text_size: self.size
+            theme_text_color: "Custom"
+            text_color: theme.text_on_primary if root.active else theme.muted
+    MDLabel:
+        text: root.label
+        font_size: sp(9)
+        bold: root.active
+        theme_text_color: "Custom"
+        text_color: theme.primary_text if root.active else theme.muted
+
+
+<QuickAction>:
+    orientation: "horizontal"
+    size_hint_y: None
+    height: dp(100)
+    padding: dp(10) if not app.is_wide else dp(14)
+    spacing: dp(8) if not app.is_wide else dp(10)
+    radius: [dp(16)]
+    ripple_behavior: True
+    IconBadge:
+        icon: root.icon
+        bg: root.tint
+        fg: root.fg
+        size: dp(34), dp(34)
+        pos_hint: {"center_y": .5}
+    MDBoxLayout:
+        orientation: "vertical"
+        size_hint_y: None
+        height: dp(46)
+        spacing: dp(2)
+        pos_hint: {"center_y": .5}
+        MDLabel:
+            text: root.title
+            font_size: sp(12)
+            bold: True
+            theme_text_color: "Custom"
+            text_color: theme.text
+        MDLabel:
+            text: root.subtitle
+            font_size: sp(9)
+            shorten: True
+            shorten_from: "right"
+            text_size: self.width, None
+            theme_text_color: "Custom"
+            text_color: theme.muted
+    MDIcon:
+        icon: "chevron-right"
+        theme_text_color: "Custom"
+        text_color: theme.muted
+        font_size: sp(16)
+        size_hint: None, None
+        size: dp(18) if app.is_wide else 0, dp(18)
+        opacity: 1 if app.is_wide else 0
+        pos_hint: {"center_y": .5}
+
+
 <AppCard>:
-    orientation: "vertical"
     radius: [dp(18)]
     elevation: 0
     md_bg_color: theme.card
@@ -520,7 +626,7 @@ Builder.load_string('''
 <SettingsRow>:
     orientation: "horizontal"
     size_hint_y: None
-    height: dp(56)
+    height: dp(64)
     tint: theme.primary_soft
     fg: theme.primary_text
     spacing: dp(12)
@@ -544,7 +650,7 @@ Builder.load_string('''
     MDBoxLayout:
         orientation: "vertical"
         size_hint_y: None
-        height: dp(36)
+        height: dp(46)
         spacing: dp(1)
         pos_hint: {"center_y": .5}
         MDLabel:

@@ -11,6 +11,7 @@ from screens.ui import (  # noqa: F401
     EmptyState,
     InfoBanner,
     ResultPane,
+    StepChip,
     UploadTile,
 )
 
@@ -19,6 +20,7 @@ Builder.load_string('''
 #:import theme screens.palette.theme
 #:import InfoBanner screens.ui.InfoBanner
 #:import ResultPane screens.ui.ResultPane
+#:import StepChip screens.ui.StepChip
 #:import UploadTile screens.ui.UploadTile
 
 
@@ -41,105 +43,44 @@ Builder.load_string('''
             # page header
             MDBoxLayout:
                 size_hint_y: None
-                height: dp(44)
+                height: dp(52)
                 MDBoxLayout:
                     orientation: "vertical"
                     size_hint_y: None
-                    height: dp(44)
+                    height: dp(52)
                     spacing: 0
                     MDLabel:
                         text: "Face Finder"
-                        font_size: sp(22)
+                        font_size: sp(28)
                         bold: True
                         theme_text_color: "Custom"
                         text_color: theme.text
                     MDLabel:
                         text: "Compare a source face with a target photo."
-                        font_size: sp(11)
+                        font_size: sp(12)
                         theme_text_color: "Custom"
                         text_color: theme.muted
-                StatusPill:
-                    text: "Engine ready" if app.services_running else "Engine off"
-                    icon: "check-circle-outline" if app.services_running else "alert-circle-outline"
-                    bg: theme.success_soft if app.services_running else theme.warning_soft
-                    fg: theme.success if app.services_running else theme.warning
-                    opacity: 1 if app.is_wide else 0
-                    disabled: not app.is_wide
-                    width: self.pill_width if app.is_wide else 0
-                    size_hint_x: None
-                    pos_hint: {"center_y": .5}
 
             MDBoxLayout:
                 size_hint_y: None
-                height: dp(30)
-                MDLabel:
-                    text: app.match_step_text
-                    font_size: sp(11)
-                    bold: True
-                    theme_text_color: "Custom"
-                    text_color: theme.primary_text
-                Widget:
-                MDBoxLayout:
-                    size_hint_x: None
-                    width: dp(116)
-                    spacing: dp(5)
-                    MDIcon:
-                        icon: "circle"
-                        font_size: sp(8)
-                        theme_text_color: "Custom"
-                        text_color: theme.success if app.services_running else theme.muted
-                        size_hint: None, None
-                        size: dp(10), dp(10)
-                        pos_hint: {"center_y": .5}
-                    MDLabel:
-                        text: "Engine running" if app.services_running else "Engine off"
-                        font_size: sp(9)
-                        theme_text_color: "Custom"
-                        text_color: theme.success if app.services_running else theme.muted
-
-            # engine warning
-            MDCard:
-                orientation: "horizontal"
-                size_hint_y: None
-                height: self.minimum_height if not app.services_running else 0
-                opacity: 1 if not app.services_running else 0
-                disabled: app.services_running
-                padding: dp(12), dp(9)
-                spacing: dp(10)
-                radius: [dp(13)]
-                elevation: 0
-                md_bg_color: theme.warning_soft
-                border_color: theme.transparent
-
-                MDIcon:
-                    icon: "alert-outline"
-                    theme_text_color: "Custom"
-                    text_color: theme.warning
-                    font_size: sp(16)
-                    size_hint: None, None
-                    size: dp(18), dp(18)
-                    pos_hint: {"center_y": .5}
-                MDLabel:
-                    text: "The face engine is off. Start it to run matches."
-                    font_size: sp(11)
-                    adaptive_height: True
-                    text_size: self.width, None
-                    theme_text_color: "Custom"
-                    text_color: theme.warning
-                MDTextButton:
-                    text: "START"
-                    font_size: sp(10)
-                    theme_text_color: "Custom"
-                    text_color: theme.warning
-                    pos_hint: {"center_y": .5}
-                    on_release: app.start_face_services()
-
-            InfoBanner:
-                text: "Pick one clear, front-facing face as the source, then any photo with faces as the target." + (" You can also drag and drop image files here." if app.is_desktop else "")
-                opacity: 1 if app.face_tip_visible else 0
-                height: self.minimum_height if app.face_tip_visible else 0
-                disabled: not app.face_tip_visible
-                close_callback: app.dismiss_face_tip
+                height: dp(34)
+                spacing: dp(6)
+                StepChip:
+                    number: "1"
+                    label: "Source"
+                    active: app.match_step_index == 1
+                StepChip:
+                    number: "2"
+                    label: "Target"
+                    active: app.match_step_index == 2
+                StepChip:
+                    number: "3"
+                    label: "Match"
+                    active: app.match_step_index == 3
+                StepChip:
+                    number: "4"
+                    label: "Results"
+                    active: app.match_step_index == 4
 
             # pickers
             MDGridLayout:

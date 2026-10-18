@@ -37,17 +37,44 @@ Existing components: `AppCard`, `IconBadge`, `Pill`, `StatusPill`,
 `FeatureChip`, `InfoBanner`, `EmptyState`, `BusyState`, `UploadTile`,
 `ResultPane`, `RecentTile`, `SettingsRow`.
 
+## Shell and navigation
+
+- The 248 px rail runs the full window height, with the product mark and
+  grouped destinations: Workspace, Face tools, Door access, System.
+- The active destination has a filled indigo surface plus a 3 px accent bar;
+  destinations are never identified by text colour alone.
+- The rail collapses to an 80 px icon rail with tooltips. The chevron in the
+  brand row collapses it; the chevron in the icon rail restores it.
+- Below 980 px the rail slides away. The context-bar menu opens the same
+  grouped navigation as a 248 px drawer with a scrim and an explicit close
+  button; Escape, the scrim, or choosing a destination closes it.
+- The navigation list scrolls independently on short screens, with privacy and
+  version anchored at the bottom.
+- The neutral 58 px context bar carries the current workspace label, live
+  engine state, theme and help. It replaces the old full-width indigo app bar.
+
 ## Responsive rules
 
 - Breakpoint: `app.is_wide` is true at **980 px** and above.
-- Wide: 232 px rail, or a 76 px icon-only rail via the app-bar chevron.
-- Narrow: rail slides off-screen; hamburger opens a 232 px drawer with a scrim.
-  Escape, the scrim, or navigating closes it.
 - Two-column content (vault auth and Face Finder) becomes one column.
 - Page padding is 24/18 on wide and 16-24 on phones; all long pages scroll.
 - Upload tiles and result panes stack vertically under the breakpoint.
-- The Face Finder status pill and page-level status pills collapse on phones;
-  the engine state remains visible in the step line and warning banner.
+- The dashboard quick-action grid is 4 columns on desktop, 2 on phones and 1
+  column below 360 px.
+- Phone context bars show the product mark, engine state, theme and help; the
+  large page title lives in the page body so it never has to wrap in the bar.
+
+## Screen patterns
+
+- Home is a command centre: one engine card with real model/engine/vault/data
+  values, then a quick-action grid, recent matches and the privacy row. It is
+  not a hero billboard.
+- Face Finder uses a four-segment progress strip (Source, Target, Match,
+  Results) tied to `app.match_step_index`; the active segment is filled and the
+  redundant tip banner and duplicate engine pills were removed.
+- Secure Vault shows a dedicated page header, a centred locked/enrolment state
+  when the engine is off, and the existing face-auth or encrypted file list
+  when it is running.
 
 ## States and feedback
 
@@ -65,7 +92,7 @@ Existing components: `AppCard`, `IconBadge`, `Pill`, `StatusPill`,
 
 ## Themes and motion
 
-- The app bar moon/sun button and **Settings → Appearance** switch light/dark.
+- The context-bar moon/sun button and **Settings → Appearance** switch light/dark.
   The preference is stored in `config/preferences.json`.
 - **Reduce motion** disables drawer, toast and screen-transition animations.
   The setting is stored in the same file.
@@ -90,6 +117,9 @@ Existing components: `AppCard`, `IconBadge`, `Pill`, `StatusPill`,
   (`Window.on_drop_file`).
 - Vault encryption is unchanged: Fernet-encrypted files on non-Android, app
   private storage on Android. The UI only lists metadata and never logs keys.
+- Camera widgets are reused and stopped on a short delay instead of being
+  destroyed on every route change. This avoids AVFoundation crashes when the
+  user moves between Access and other sections while the camera is starting.
 - Window sizing is applied only on desktop; phones run fullscreen.
 
 ## Verification matrix used for this redesign
@@ -99,7 +129,8 @@ Existing components: `AppCard`, `IconBadge`, `Pill`, `StatusPill`,
 | 1200 × 820 (desktop) | yes | yes | Home, Face Finder, Vault, Settings, Access, People |
 | 760 × 820 (small laptop/tablet) | yes | yes | shell, drawer, Face Finder, Home |
 | 420 × 820 (large phone) | yes | yes | Home, drawer, dialogs, Face Finder |
-| 360 × 800 (phone) | yes | yes | Home, Face Finder, Access, People, dialogs |
+| 360 × 800 (phone) | yes | yes | Home, Face Finder, Access, People, Settings, vault |
+| 320 × 700 (small phone) | yes | yes | Home, shell, quick actions |
 
 Only macOS was available for runtime testing in this environment. Android,
 iOS, Windows and Linux builds must be smoke-tested on their targets before a
