@@ -13,6 +13,7 @@ from kivy.properties import (
 )
 from kivy.uix.behaviors import ButtonBehavior
 from kivy.uix.floatlayout import FloatLayout
+from kivymd.uix.behaviors import HoverBehavior
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.card import MDCard
 
@@ -138,7 +139,13 @@ class ResultPane(AppCard):
     title = StringProperty("")
 
 
-class SettingsRow(ButtonBehavior, MDBoxLayout):
+class RecentTile(AppCard):
+    """Thumbnail of a generated match shown on the dashboard."""
+
+    image_source = StringProperty("")
+
+
+class SettingsRow(ButtonBehavior, HoverBehavior, MDBoxLayout):
     """Single tappable row inside a settings card."""
 
     icon = StringProperty("cog-outline")
@@ -147,6 +154,7 @@ class SettingsRow(ButtonBehavior, MDBoxLayout):
     tint = ColorProperty(tokens.PRIMARY_SOFT)
     fg = ColorProperty(tokens.PRIMARY)
     chevron = BooleanProperty(True)
+    hover_bg = ColorProperty(tokens.TRANSPARENT)
 
 
 Builder.load_string('''
@@ -484,6 +492,15 @@ Builder.load_string('''
     spacing: dp(12)
     padding: dp(8), 0, dp(4), 0
     opacity: .55 if self.disabled else 1
+    canvas.before:
+        Color:
+            rgba: root.hover_bg
+        RoundedRectangle:
+            pos: self.pos
+            size: self.size
+            radius: [dp(12)]
+    on_enter: root.hover_bg = parse_color(tokens.HOVER) if not root.disabled else parse_color(tokens.TRANSPARENT)
+    on_leave: root.hover_bg = parse_color(tokens.TRANSPARENT)
     IconBadge:
         icon: root.icon
         bg: root.tint
@@ -522,4 +539,19 @@ Builder.load_string('''
         size: dp(20), dp(20)
         pos_hint: {"center_y": .5}
         opacity: 1 if root.chevron else 0
+
+
+<RecentTile>:
+    radius: [dp(14)]
+    padding: 0
+    ripple_behavior: True
+    size_hint_y: None
+    height: dp(104)
+    on_enter: self.border_color = parse_color(tokens.PRIMARY)
+    on_leave: self.border_color = parse_color(tokens.LINE)
+    on_release: app.open_file(root.image_source)
+
+    Image:
+        source: root.image_source
+        fit_mode: "cover"
 ''')

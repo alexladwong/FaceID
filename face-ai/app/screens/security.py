@@ -41,7 +41,7 @@ Builder.load_string('''
 
 <SecSingleFile>:
     text: root.filename
-    secondary_text: "Encrypted - tap to download"
+    secondary_text: root.detail
     on_release: app.download_sec_file(root)
     IconLeftWidget:
         icon: "delete-outline"
@@ -104,11 +104,10 @@ Builder.load_string('''
         size_hint_y: None
         height: dp(280)
         Widget:
-        MDBoxLayout:
+        FloatLayout:
             id: cam_holder
             size_hint: None, 1
             width: min(root.width - dp(64), dp(280) * root.preview_ratio)
-            padding: dp(6)
             canvas.before:
                 Color:
                     rgba: parse_color("#000000")
@@ -116,6 +115,13 @@ Builder.load_string('''
                     pos: self.pos
                     size: self.size
                     radius: [dp(14)]
+                StencilPush:
+                RoundedRectangle:
+                    pos: self.pos
+                    size: self.size
+                    radius: [dp(14)]
+            canvas.after:
+                StencilPop
         Widget:
     MDLabel:
         text: "If the preview stays black, allow camera access in System Settings -> Privacy -> Camera."
@@ -228,6 +234,86 @@ Builder.load_string('''
         height: dp(44)
         disabled: app.verifying
         on_release: app.sec_capture_frame(None, False)
+
+
+<SecurityTipsCard>:
+    orientation: "vertical"
+    size_hint_y: None
+    height: self.minimum_height
+    padding: dp(16)
+    spacing: dp(7)
+
+    MDLabel:
+        text: "For a good face check"
+        font_size: sp(13)
+        bold: True
+        size_hint_y: None
+        height: dp(20)
+        theme_text_color: "Custom"
+        text_color: tokens.TEXT
+
+    MDBoxLayout:
+        size_hint_y: None
+        height: dp(22)
+        spacing: dp(8)
+        MDIcon:
+            icon: "check-circle-outline"
+            theme_text_color: "Custom"
+            text_color: tokens.SUCCESS
+            font_size: sp(13)
+            size_hint: None, None
+            size: dp(16), dp(16)
+            pos_hint: {"center_y": .5}
+        MDLabel:
+            text: "Look straight at the camera"
+            font_size: sp(10)
+            theme_text_color: "Custom"
+            text_color: tokens.MUTED
+
+    MDBoxLayout:
+        size_hint_y: None
+        height: dp(22)
+        spacing: dp(8)
+        MDIcon:
+            icon: "check-circle-outline"
+            theme_text_color: "Custom"
+            text_color: tokens.SUCCESS
+            font_size: sp(13)
+            size_hint: None, None
+            size: dp(16), dp(16)
+            pos_hint: {"center_y": .5}
+        MDLabel:
+            text: "Keep a single face in frame"
+            font_size: sp(10)
+            theme_text_color: "Custom"
+            text_color: tokens.MUTED
+
+    MDBoxLayout:
+        size_hint_y: None
+        height: dp(22)
+        spacing: dp(8)
+        MDIcon:
+            icon: "check-circle-outline"
+            theme_text_color: "Custom"
+            text_color: tokens.SUCCESS
+            font_size: sp(13)
+            size_hint: None, None
+            size: dp(16), dp(16)
+            pos_hint: {"center_y": .5}
+        MDLabel:
+            text: "Good lighting helps matching"
+            font_size: sp(10)
+            theme_text_color: "Custom"
+            text_color: tokens.MUTED
+
+    MDLabel:
+        text: "Your face is processed on this device and never uploaded."
+        font_size: sp(9)
+        theme_text_color: "Custom"
+        text_color: tokens.SUCCESS
+        size_hint_y: None
+        height: self.texture_size[1]
+        text_size: self.width, None
 
 
 <SecAfterLogin>:
@@ -365,6 +451,7 @@ class SecurityBox(MDBoxLayout):
 
 class SecSingleFile(TwoLineAvatarIconListItem):
     filename = StringProperty("")
+    detail = StringProperty("Encrypted - tap to download")
 
 
 class SecAfterLogin(MDBoxLayout):
@@ -422,6 +509,10 @@ class RegisterCard(AppCard):
 
 
 class LoginCard(AppCard):
+    pass
+
+
+class SecurityTipsCard(AppCard):
     pass
 
 

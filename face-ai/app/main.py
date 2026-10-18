@@ -4,12 +4,13 @@ import sys
 from threading import Thread
 import json
 import re
+import datetime
 import subprocess
 import requests
 
 from kivymd.app import MDApp
 from kivymd.uix.boxlayout import MDBoxLayout
-from kivymd.uix.navigationdrawer import MDNavigationDrawerMenu
+from kivymd.uix.navigationdrawer import MDNavigationDrawerItem
 #from kivymd.uix.menu import MDDropdownMenu
 from kivymd.uix.filemanager import MDFileManager
 from kivymd.uix.label import MDLabel
@@ -17,7 +18,9 @@ from kivymd.uix.dialog import MDDialog
 from kivymd.uix.button import MDFlatButton, MDFloatingActionButton
 
 #
+from kivy.animation import Animation
 from kivy.clock import Clock
+from kivy.graphics import PopMatrix, PushMatrix, Rotate
 from kivy.utils import platform, get_color_from_hex
 from kivy.core.window import Window
 from kivy.metrics import dp, sp
@@ -42,9 +45,10 @@ from screens.security import (
     SecAfterLogin,
     SecSingleFile,
     SecurityBox,
+    SecurityTipsCard,
 )
 from screens.setting import SettingsBox
-from screens.ui import BusyState, EmptyState, NoticeCard
+from screens.ui import BusyState, EmptyState, NoticeCard, RecentTile
 
 # IMPORTANT: Set this property for keyboard behavior
 Window.softinput_mode = "below_target"
@@ -75,10 +79,6 @@ else:
 class ImageWithAction(ButtonBehavior, Image):
     img_type = StringProperty("none")
 
-class ContentNavigationDrawer(MDNavigationDrawerMenu):
-    screen_manager = ObjectProperty()
-    nav_drawer = ObjectProperty()
-
 class MainScreenBox(MDBoxLayout):
     top_pad = NumericProperty(0)
     bottom_pad = NumericProperty(0)
@@ -97,6 +97,7 @@ class MainScreenBox(MDBoxLayout):
 ### --- main app --- ###
 class FaceAiApp(MDApp):
     is_downloading = ObjectProperty(None)
+    initial_window_size = (1200, 820)
 
     # UI state (declared as properties so the kv file can bind to them)
     models_ready = BooleanProperty(False)
@@ -110,6 +111,10 @@ class FaceAiApp(MDApp):
     vault_tip_visible = BooleanProperty(True)
     ready_to_match = BooleanProperty(False)
     is_desktop = BooleanProperty(False)
+    is_wide = BooleanProperty(False)
+    nav_offset = NumericProperty(dp(232))
+    home_action_label = StringProperty("Start face engine")
+    home_action_icon = StringProperty("play")
     app_version = StringProperty(__version__)
     output_count = NumericProperty(0)
     output_count_label = StringProperty("No generated images yet")
@@ -118,6 +123,7 @@ class FaceAiApp(MDApp):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         Window.bind(on_keyboard=self.events)
+        Window.bind(on_key_down=self._on_key_down)
         self.logo_path = os.path.join(base_path, "data", "images", "favicon.png")
         self.is_desktop = platform not in ("android", "ios")
         self.face_ai = None
@@ -145,6 +151,14 @@ class FaceAiApp(MDApp):
             "fm_dont_again": False,
             "sec_dont_again": False
         }
+        self.is_wide = Window.width >= 980
+        self._drawer_open = False
+        Window.bind(on_resize=self._on_window_resize)
+        self.bind(
+            models_ready=self._update_home_action,
+            services_running=self._update_home_action,
+            download_active=self._update_home_action,
+        )
 
     def build(self):
         self.theme_cls.primary_palette = "Indigo"
@@ -156,9 +170,210 @@ class FaceAiApp(MDApp):
         except Exception:
             pass
         if self.is_desktop:
-            Window.size = (1060, 720)
+            Window.size = self.initial_window_size
             Window.clearcolor = get_color_from_hex(tokens.SURFACE)
+        self.is_wide = Window.width >= 980
         return Builder.load_file(kv_file_path)
+
+    # -- responsive shell / dashboard helpers ------------------------
+    def _on_window_resize(self, window, width, height):
+        self.is_wide = width >= 980
+        if self.root:
+            if self.is_wide:
+                self.close_drawer()
+            self._apply_nav_mode()
+            self.refresh_recent_outputs()
+
+    def _apply_nav_mode(self):
+        if not self.root:
+            return
+        ids = self.root.ids
+        panel = ids.get("nav_panel")
+        scrim = ids.get("drawer_scrim")
+        if panel is None:
+            return
+        if self.is_wide:
+            self.nav_offset = dp(232)
+            panel.x = 0
+            panel.disabled = False
+            self._drawer_open = False
+            if scrim is not None:
+                scrim.opacity = 0
+                scrim.disabled = True
+        else:
+            self.nav_offset = 0
+            panel.disabled = False
+            if not self._drawer_open:
+                panel.x = -panel.width
+
+    def open_drawer(self, instance=None):
+        if self.is_wide or not self.root:
+            return
+        panel = self.root.ids.nav_panel
+        scrim = self.root.ids.drawer_scrim
+        self._drawer_open = True
+        panel.x = -panel.width
+        scrim.disabled = False
+        Animation(x=0, d=.18, t="out_quad").start(panel)
+        Animation(opacity=1, d=.16).start(scrim)
+
+    def close_drawer(self, instance=None):
+        if not self.root:
+            return
+        panel = self.root.ids.get("nav_panel")
+        scrim = self.root.ids.get("drawer_scrim")
+        if panel is None:
+            return
+        was_open = self._drawer_open
+        self._drawer_open = False
+        Animation(x=-panel.width, d=.16, t="in_quad").start(panel)
+        if scrim is not None:
+            Animation(opacity=0, d=.16).start(scrim)
+            Clock.schedule_once(lambda dt: setattr(scrim, "disabled", True), .18)
+        if not was_open:
+            panel.x = -panel.width
+
+    def _wire_navigation(self):
+        manager = self.root.ids.screen_manager
+        menu = self.root.ids.get("nav_menu")
+        if menu:
+            menu.screen_manager = manager
+        self._apply_nav_mode()
+        self._set_nav_selection(manager.current)
+
+    def _update_home_action(self, *args):
+        if self.download_active:
+            self.home_action_label = "Downloading models..."
+            self.home_action_icon = "download"
+        elif not self.models_ready:
+            self.home_action_label = "Download models"
+            self.home_action_icon = "download"
+        elif not self.services_running:
+            self.home_action_label = "Start face engine"
+            self.home_action_icon = "play"
+        else:
+            self.home_action_label = "Open Face Finder"
+            self.home_action_icon = "account-search"
+
+    def home_action(self, instance=None):
+        if self.download_active:
+            return
+        if not self.models_ready:
+            self.start_model_download()
+        elif not self.services_running:
+            self.start_face_services()
+        else:
+            self.goto_screen("faceFindScr")
+
+    def _on_key_down(self, window, key, scancode, codepoint, modifiers):
+        if self._drawer_open and key == 27:
+            self.close_drawer()
+            return True
+        meta = "meta" in modifiers or "ctrl" in modifiers
+        if not meta:
+            return False
+        screen = self.root.ids.screen_manager.current if self.root else ""
+        if codepoint in ("1", "2", "3", "4"):
+            target = {
+                "1": "initScreen",
+                "2": "faceFindScr",
+                "3": "securityScr",
+                "4": "settingsScr",
+            }[codepoint]
+            self.goto_screen(target)
+            return True
+        if codepoint == "o" and screen == "faceFindScr":
+            self.open_img_file_manager(self.img_purpose or "src")
+            return True
+        if codepoint == "r" and screen == "faceFindScr":
+            self.reset_face_matcher()
+            return True
+        if codepoint == "l" and screen == "securityScr":
+            self.lock_vault()
+            return True
+        if codepoint == "h":
+            self.show_help_dialog()
+            return True
+        return False
+
+    def goto_screen(self, name):
+        self.root.ids.screen_manager.current = name
+        self._set_nav_selection(name)
+        if self._drawer_open:
+            self.close_drawer()
+
+    def _set_nav_selection(self, current):
+        labels = {
+            "Home": "initScreen",
+            "Face Finder": "faceFindScr",
+            "Secure Vault": "securityScr",
+            "Settings": "settingsScr",
+        }
+        menu = self.root.ids.get("nav_menu")
+        if not menu:
+            return
+        for widget in menu.walk():
+            if isinstance(widget, MDNavigationDrawerItem):
+                widget.selected = labels.get(widget.text) == current
+
+    def _open_path(self, path):
+        if not path or not os.path.exists(path):
+            self.show_toast_msg("That file is no longer available.", is_error=True)
+            return
+        try:
+            if platform == "macosx":
+                subprocess.Popen(["open", path])
+            elif platform == "win":
+                os.startfile(path)
+            elif platform == "linux":
+                subprocess.Popen(["xdg-open", path])
+            else:
+                self.show_toast_msg("Opening files is not supported on this device.")
+        except Exception as e:
+            print(f"Could not open {path}: {e}")
+            self.show_toast_msg("Could not open that file.", is_error=True)
+
+    def open_file(self, path, instance=None):
+        self._open_path(path)
+
+    def open_outputs_folder(self, instance=None):
+        self._open_path(self.op_dir)
+
+    def refresh_recent_outputs(self, instance=None):
+        if not self.root:
+            return
+        try:
+            files = [
+                os.path.join(self.op_dir, name)
+                for name in os.listdir(self.op_dir)
+                if name.lower().endswith((".jpg", ".jpeg", ".png"))
+            ]
+            files.sort(key=os.path.getmtime, reverse=True)
+        except OSError as e:
+            print(f"Could not list recent outputs: {e}")
+            files = []
+        recent = files[:6]
+        init = self.root.ids.init_screen
+        grid = init.ids.recent_grid
+        scroll = init.ids.recent_scroll
+        empty = init.ids.recent_empty
+        grid.clear_widgets()
+        tile_width = dp(206) if self.is_wide else dp(150)
+        for path in recent:
+            tile = RecentTile(image_source=path)
+            tile.size_hint = (None, None)
+            tile.width = tile_width
+            tile.height = dp(104)
+            grid.add_widget(tile)
+        has_tiles = bool(recent)
+        scroll.size_hint_y = None
+        scroll.height = dp(104) if has_tiles else 0
+        scroll.opacity = 1 if has_tiles else 0
+        scroll.disabled = not has_tiles
+        empty.size_hint_y = None
+        empty.height = dp(112) if not has_tiles else 0
+        empty.opacity = 1 if not has_tiles else 0
+        empty.disabled = has_tiles
 
     def on_start(self):
         # paths setup
@@ -253,7 +468,10 @@ class FaceAiApp(MDApp):
         # check if model files are present
         Clock.schedule_once(lambda dt: self.model_existance_check())
         Clock.schedule_once(lambda dt: self.reset_result_panes())
+        Clock.schedule_once(lambda dt: self._wire_navigation())
+        Clock.schedule_once(lambda dt: self.refresh_recent_outputs())
         self.refresh_output_count()
+        self._update_home_action()
         print("Init success...")
 
     def acquire_wakelock(self):
@@ -770,6 +988,7 @@ class FaceAiApp(MDApp):
             box.clear_widgets()
             box.add_widget(image)
         self.refresh_output_count()
+        self.refresh_recent_outputs()
         self.show_toast_msg("Match complete. Tap a result to save or delete it.")
 
     def download_image_from_view(self, instance=None):
@@ -886,6 +1105,7 @@ class FaceAiApp(MDApp):
                 if self.last_instance and self.last_instance.parent:
                     Clock.schedule_once(lambda dt: self.last_instance.parent.remove_widget(self.last_instance))
                 self.refresh_output_count()
+                self.refresh_recent_outputs()
                 if self.sec_file_box:
                     self.refresh_sec_file_list()
             except Exception as e:
@@ -930,6 +1150,7 @@ class FaceAiApp(MDApp):
                 detail="Looking for enrolled faces...",
             )
         )
+        self.sec_uix.add_widget(Widget())
         Clock.schedule_once(
             lambda dt: self.face_ai.check_if_data_exist(self._init_security_callback)
         )
@@ -964,15 +1185,7 @@ class FaceAiApp(MDApp):
                     cap.release()
         return cam_indx
 
-    def _add_camera_card(self):
-        card = CameraCard()
-        self.sec_uix.add_widget(card)
-        self.camera_card = card
-        return card
-
-    def add_camera(self, parent_element):
-        self.on_security_leave()
-        self.sec_uix = parent_element
+    def _make_camera_card(self):
         cam_indx = self._camera_index()
         resolution = (960, 720) if platform == "android" else (640, 480)
         if platform == "android":
@@ -982,12 +1195,23 @@ class FaceAiApp(MDApp):
                 self.sec_file_dir,
                 f"login_{now.strftime('%Y%m%d')}_{now.strftime('%H%M%S')}.jpg",
             )
-        card = self._add_camera_card()
+        card = CameraCard()
+        self.camera_card = card
         if cam_indx < 0:
             card.show_error("No camera was found on this device.")
             self.show_toast_msg("No camera found on this device.", is_error=True)
-            return
+            return card
         try:
+            if platform != "android" and self.camera:
+                # AVFoundation may hand back a sideways texture on macOS; a
+                # fresh widget keeps the rotation transform from stacking.
+                try:
+                    self.camera.play = False
+                except Exception:
+                    pass
+                if self.camera.parent:
+                    self.camera.parent.remove_widget(self.camera)
+                self.camera = None
             if not self.camera:
                 self.camera = Camera(
                     index=cam_indx,
@@ -999,26 +1223,59 @@ class FaceAiApp(MDApp):
                 self.camera.play = True
             if self.camera.parent:
                 self.camera.parent.remove_widget(self.camera)
-            self.camera.size_hint = (1, 1)
-            card.ids.cam_holder.add_widget(self.camera)
+            holder = card.ids.cam_holder
+            if platform == "android":
+                self.camera.size_hint = (1, 1)
+            else:
+                self.camera.size_hint = (None, None)
+                self.camera.fit_mode = "fill"
+                with self.camera.canvas.before:
+                    PushMatrix()
+                    self._camera_rotate = Rotate(angle=-90, origin=self.camera.center)
+                with self.camera.canvas.after:
+                    PopMatrix()
+                holder.bind(size=lambda *a: self._fit_rotated_camera(holder))
+                Clock.schedule_once(lambda dt: self._fit_rotated_camera(holder))
+            holder.add_widget(self.camera)
             card.status = "LIVE" if self.camera.texture else "Starting..."
-            Clock.schedule_once(lambda dt: self._refresh_camera_status(), 1.2)
+            self.camera.bind(texture=lambda *a: self._refresh_camera_status(card))
+            Clock.schedule_once(lambda dt: self._refresh_camera_status(card), 1.2)
         except Exception as e:
             print(f"Error setting up the camera: {e}")
             card.show_error("The camera could not be started.\nCheck the camera permission.")
             self.show_toast_msg("The camera could not be started.", is_error=True)
+        return card
 
-    def _refresh_camera_status(self):
-        if not self.camera_card or not self.camera:
+    def _fit_rotated_camera(self, holder):
+        if platform == "android" or not self.camera:
+            return
+        margin = dp(10)
+        inner_w = max(dp(40), holder.width - 2 * margin)
+        inner_h = max(dp(40), holder.height - 2 * margin)
+        # Draw the texture in a box that is landscape-inverse, then rotate it
+        # 90 degrees so the corrected frame fills the portrait/landscape tile.
+        self.camera.size = (inner_h, inner_w)
+        self.camera.center = holder.center
+        rotate = getattr(self, "_camera_rotate", None)
+        if rotate is not None:
+            rotate.origin = self.camera.center
+
+    def _refresh_camera_status(self, card=None):
+        card = card or self.camera_card
+        if not card or not self.camera:
             return
         texture = self.camera.texture
         if texture:
             width, height = texture.size
             if width and height:
-                self.camera_card.preview_ratio = max(0.55, min(2.2, width / height))
-            self.camera_card.status = "LIVE"
+                if platform == "android":
+                    card.preview_ratio = max(0.55, min(2.2, width / height))
+                else:
+                    # raw frames arrive rotated 90 degrees on macOS
+                    card.preview_ratio = max(0.55, min(2.2, height / width))
+            card.status = "LIVE"
         else:
-            self.camera_card.status = "No signal"
+            card.status = "No signal"
 
     def reset_tips(self, instance=None):
         self.user_preferences["fm_dont_again"] = False
@@ -1034,34 +1291,45 @@ class FaceAiApp(MDApp):
         self.vault_tip_visible = not self.user_preferences["sec_dont_again"]
         self.on_security_enter()
 
-    def add_name_input(self, parent_element):
-        card = RegisterCard()
-        self.sec_name_input = card.ids.sec_name_inp_txt
-        parent_element.add_widget(card)
-
-    def add_login_btn(self, parent_element):
-        parent_element.add_widget(LoginCard())
+    def _auth_view(self, mode="auto"):
+        """Camera and form side by side on desktop, stacked on mobile."""
+        self.on_security_leave()
+        self.sec_uix = self.root.ids.security_box.ids.sec_elements_box
+        enroll = mode == "enroll" or not self.data_in_db
+        form = RegisterCard() if enroll else LoginCard()
+        self.sec_name_input = form.ids.sec_name_inp_txt if enroll else None
+        camera_card = self._make_camera_card()
+        if self.is_wide:
+            row = MDBoxLayout(
+                orientation="horizontal",
+                spacing=dp(12),
+                size_hint_y=None,
+                height=dp(392),
+            )
+            camera_card.size_hint = (None, 1)
+            camera_card.width = dp(430)
+            right = MDBoxLayout(orientation="vertical", spacing=dp(10))
+            right.add_widget(form)
+            right.add_widget(SecurityTipsCard())
+            right.add_widget(Widget())
+            row.add_widget(camera_card)
+            row.add_widget(right)
+            self.sec_uix.add_widget(row)
+            self.sec_uix.add_widget(Widget())
+        else:
+            self.sec_uix.add_widget(camera_card)
+            self.sec_uix.add_widget(form)
+            self.sec_uix.add_widget(Widget())
 
     def _init_security_callback(self, resp):  # should not be called directly
         if self.login_success:
             self.sec_login_ok()
             return
-        self.sec_uix = self.root.ids.security_box.ids.sec_elements_box
-        if self.sec_uix:
-            self.sec_uix.clear_widgets()
-        if not resp:  # no data found
-            self.add_camera(self.sec_uix)
-            self.add_name_input(self.sec_uix)
-        else:  # data found, need login
-            self.data_in_db = True
-            self.add_camera(self.sec_uix)
-            self.add_login_btn(self.sec_uix)
+        self.data_in_db = bool(resp)
+        self._auth_view("auto")
 
     def add_new_face(self, instance=None):
-        self.on_security_leave()
-        self.sec_uix = self.root.ids.security_box.ids.sec_elements_box
-        self.add_camera(self.sec_uix)
-        self.add_name_input(self.sec_uix)
+        self._auth_view("enroll")
 
     def get_sec_file_list(self, path: str):
         files = []
@@ -1104,6 +1372,19 @@ class FaceAiApp(MDApp):
         for file in sec_files:
             fileElem = SecSingleFile()
             fileElem.filename = str(file)
+            try:
+                full_path = os.path.join(self.sec_file_dir, file)
+                size = os.path.getsize(full_path)
+                stamp = os.path.getmtime(full_path)
+                size_txt = (
+                    f"{size / 1024:.0f} KB"
+                    if size < 1024 * 1024
+                    else f"{size / (1024 * 1024):.1f} MB"
+                )
+                date_txt = datetime.datetime.fromtimestamp(stamp).strftime("%d %b %Y")
+                fileElem.detail = f"Encrypted - {size_txt} - {date_txt}"
+            except OSError:
+                fileElem.detail = "Encrypted - tap to download"
             secMdList.add_widget(fileElem)
         self._toggle_vault_empty(len(sec_files) == 0)
 
@@ -1187,6 +1468,9 @@ class FaceAiApp(MDApp):
             img = cv2.cvtColor(arr, cv2.COLOR_RGBA2BGR)
             if platform == "android":
                 img = np.flipud(img)  # Flip up down in android
+            else:
+                # AVFoundation frames arrive rotated 90 degrees
+                img = cv2.rotate(img, cv2.ROTATE_90_CLOCKWISE)
             self.sec_face_login_save(name_txt, img, newFace)
         except Exception as e:
             print(f"Error processing frame: {e}")
@@ -1346,6 +1630,7 @@ class FaceAiApp(MDApp):
                     print(f"Could not delete {file_path}: {e}")
         self.txt_dialog_closer(instance)
         self.refresh_output_count()
+        self.refresh_recent_outputs()
         if not self.is_onnx_running:
             self.reset_result_panes()
         noun = "image" if removed == 1 else "images"
@@ -1374,6 +1659,8 @@ class FaceAiApp(MDApp):
             "Home: download the model files once, then start the engine.\n"
             "Face Finder: one clear face as the source, any photo as the target.\n"
             "Secure Vault: enroll a face to lock and unlock your files.\n\n"
+            "Shortcuts: Ctrl/Cmd+1..4 switch sections, Ctrl/Cmd+O picks a photo,\n"
+            "Ctrl/Cmd+R resets Face Finder, Ctrl/Cmd+L locks the vault, Esc closes the menu.\n\n"
             "Everything is processed on this device.",
             buttons=[
                 MDFlatButton(

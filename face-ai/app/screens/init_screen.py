@@ -6,12 +6,19 @@ from kivy.utils import platform
 from kivymd.uix.boxlayout import MDBoxLayout
 
 # Local imports (their kv rules are registered here as well).
-from screens.ui import AppCard, FeatureChip, IconBadge, StatusPill  # noqa: F401
+from screens.ui import (  # noqa: F401
+    AppCard,
+    EmptyState,
+    FeatureChip,
+    IconBadge,
+    StatusPill,
+)
 
 
 Builder.load_string('''
 #:import tokens screens.tokens
 #:import AppCard screens.ui.AppCard
+#:import EmptyState screens.ui.EmptyState
 #:import FeatureChip screens.ui.FeatureChip
 #:import IconBadge screens.ui.IconBadge
 #:import StatusPill screens.ui.StatusPill
@@ -30,15 +37,43 @@ Builder.load_string('''
         MDBoxLayout:
             orientation: "vertical"
             adaptive_height: True
-            spacing: dp(12)
-            padding: dp(20), dp(14), dp(20), dp(14)
+            spacing: dp(16)
+            padding: dp(24), dp(18), dp(24), dp(18)
 
-            # --- brand hero ---------------------------------------------
+            # --- page header --------------------------------------------
+            MDBoxLayout:
+                size_hint_y: None
+                height: dp(42)
+                MDBoxLayout:
+                    orientation: "vertical"
+                    size_hint_y: None
+                    height: dp(42)
+                    spacing: dp(0)
+                    MDLabel:
+                        text: "Home"
+                        font_size: sp(22)
+                        bold: True
+                        theme_text_color: "Custom"
+                        text_color: tokens.TEXT
+                    MDLabel:
+                        text: "Your private face workspace"
+                        font_size: sp(11)
+                        theme_text_color: "Custom"
+                        text_color: tokens.MUTED
+                Widget:
+                StatusPill:
+                    text: "Offline"
+                    icon: "wifi-off"
+                    bg: tokens.PRIMARY_SOFT
+                    fg: tokens.PRIMARY
+                    pos_hint: {"center_y": .5}
+
+            # --- hero ----------------------------------------------------
             MDCard:
                 orientation: "vertical"
                 size_hint_y: None
-                height: dp(176)
-                padding: dp(18)
+                height: dp(154)
+                padding: dp(20)
                 radius: [dp(22)]
                 elevation: 0
                 md_bg_color: tokens.PRIMARY
@@ -46,13 +81,12 @@ Builder.load_string('''
 
                 MDBoxLayout:
                     size_hint_y: None
-                    height: dp(56)
+                    height: dp(54)
                     spacing: dp(14)
-
                     MDCard:
                         size_hint: None, None
-                        size: dp(56), dp(56)
-                        radius: [dp(16)]
+                        size: dp(52), dp(52)
+                        radius: [dp(15)]
                         elevation: 0
                         md_bg_color: tokens.WHITE_18
                         border_color: tokens.TRANSPARENT
@@ -60,24 +94,22 @@ Builder.load_string('''
                             icon: "face-recognition"
                             theme_text_color: "Custom"
                             text_color: tokens.ON_PRIMARY
-                            font_size: sp(30)
+                            font_size: sp(28)
                             pos_hint: {"center_x": .5, "center_y": .5}
-
                     MDBoxLayout:
                         orientation: "vertical"
                         size_hint_y: None
                         height: dp(46)
                         spacing: dp(1)
                         pos_hint: {"center_y": .5}
-
                         MDLabel:
                             text: "Welcome to Face AI"
-                            font_size: sp(20)
+                            font_size: sp(19)
                             bold: True
                             theme_text_color: "Custom"
                             text_color: tokens.ON_PRIMARY
                         MDLabel:
-                            text: "Detect, match and unlock - fully offline."
+                            text: "Detect, match and unlock - all on this device."
                             font_size: sp(11)
                             theme_text_color: "Custom"
                             text_color: tokens.ON_PRIMARY_SOFT
@@ -87,111 +119,171 @@ Builder.load_string('''
 
                 MDBoxLayout:
                     size_hint_y: None
-                    height: dp(26)
-                    spacing: dp(6)
-
+                    height: dp(42)
+                    spacing: dp(10)
+                    MDFillRoundFlatIconButton:
+                        text: app.home_action_label
+                        icon: app.home_action_icon
+                        font_size: sp(12)
+                        size_hint: None, None
+                        size: dp(196), dp(42)
+                        md_bg_color: 1, 1, 1, 1
+                        theme_text_color: "Custom"
+                        text_color: tokens.PRIMARY
+                        theme_icon_color: "Custom"
+                        icon_color: tokens.PRIMARY
+                        disabled: app.download_active
+                        on_release: app.home_action()
+                    Widget:
                     FeatureChip:
                         text: "100% offline"
                         icon: "wifi-off"
-                    FeatureChip:
-                        text: "On-device AI"
-                        icon: "chip"
+                        width: self.pill_width if app.is_wide else 0
+                        opacity: 1 if app.is_wide else 0
                     FeatureChip:
                         text: "Encrypted vault"
                         icon: "shield-lock-outline"
-                    Widget:
+                        width: self.pill_width if app.is_wide else 0
+                        opacity: 1 if app.is_wide else 0
 
-            # --- setup steps --------------------------------------------
+            # --- status cards -------------------------------------------
+            MDGridLayout:
+                cols: 3 if app.is_wide else 1
+                spacing: dp(12)
+                size_hint_y: None
+                height: dp(94) if app.is_wide else dp(306)
+
+                AppCard:
+                    orientation: "horizontal"
+                    padding: dp(14)
+                    spacing: dp(12)
+                    IconBadge:
+                        icon: "cube-outline"
+                        bg: tokens.PRIMARY_SOFT
+                        fg: tokens.PRIMARY
+                        size: dp(38), dp(38)
+                        pos_hint: {"center_y": .5}
+                    MDBoxLayout:
+                        orientation: "vertical"
+                        size_hint_y: None
+                        height: dp(42)
+                        spacing: dp(1)
+                        pos_hint: {"center_y": .5}
+                        MDLabel:
+                            text: "Models"
+                            font_size: sp(11)
+                            theme_text_color: "Custom"
+                            text_color: tokens.MUTED
+                        MDLabel:
+                            text: "Ready" if app.models_ready else "Missing"
+                            font_size: sp(16)
+                            bold: True
+                            theme_text_color: "Custom"
+                            text_color: tokens.SUCCESS if app.models_ready else tokens.WARNING
+
+                AppCard:
+                    orientation: "horizontal"
+                    padding: dp(14)
+                    spacing: dp(12)
+                    IconBadge:
+                        icon: "brain"
+                        bg: tokens.SUCCESS_SOFT
+                        fg: tokens.SUCCESS
+                        size: dp(38), dp(38)
+                        pos_hint: {"center_y": .5}
+                    MDBoxLayout:
+                        orientation: "vertical"
+                        size_hint_y: None
+                        height: dp(42)
+                        spacing: dp(1)
+                        pos_hint: {"center_y": .5}
+                        MDLabel:
+                            text: "Face engine"
+                            font_size: sp(11)
+                            theme_text_color: "Custom"
+                            text_color: tokens.MUTED
+                        MDLabel:
+                            text: "Running" if app.services_running else "Stopped"
+                            font_size: sp(16)
+                            bold: True
+                            theme_text_color: "Custom"
+                            text_color: tokens.SUCCESS if app.services_running else tokens.MUTED
+
+                AppCard:
+                    orientation: "horizontal"
+                    padding: dp(14)
+                    spacing: dp(12)
+                    IconBadge:
+                        icon: "shield-lock-outline"
+                        bg: "#F1F3F9"
+                        fg: tokens.MUTED
+                        size: dp(38), dp(38)
+                        pos_hint: {"center_y": .5}
+                    MDBoxLayout:
+                        orientation: "vertical"
+                        size_hint_y: None
+                        height: dp(42)
+                        spacing: dp(1)
+                        pos_hint: {"center_y": .5}
+                        MDLabel:
+                            text: "Secure vault"
+                            font_size: sp(11)
+                            theme_text_color: "Custom"
+                            text_color: tokens.MUTED
+                        MDLabel:
+                            text: "Encrypted"
+                            font_size: sp(16)
+                            bold: True
+                            theme_text_color: "Custom"
+                            text_color: tokens.SUCCESS
+
+            # --- first-run setup ----------------------------------------
             AppCard:
                 orientation: "vertical"
                 size_hint_y: None
-                height: self.minimum_height
+                height: self.minimum_height if not app.models_ready else 0
+                opacity: 1 if not app.models_ready else 0
+                disabled: app.models_ready
                 spacing: dp(10)
 
                 MDBoxLayout:
                     size_hint_y: None
                     height: dp(22)
-
                     MDLabel:
-                        text: "Get started"
+                        text: "First-time setup"
                         font_size: sp(15)
                         bold: True
                         theme_text_color: "Custom"
                         text_color: tokens.TEXT
                     Widget:
                     MDLabel:
-                        text: "2 steps"
+                        text: "one time"
                         font_size: sp(10)
-                        halign: "right"
                         size_hint_x: None
-                        width: dp(52)
+                        width: dp(56)
+                        halign: "right"
                         theme_text_color: "Custom"
                         text_color: tokens.MUTED
-
-                # Step 1 - models
+                MDLabel:
+                    text: "Download the ONNX models once (~140 MB), then the face engine starts automatically. Everything runs on this device."
+                    font_size: sp(11)
+                    size_hint_y: None
+                    height: self.texture_size[1]
+                    text_size: self.width, None
+                    theme_text_color: "Custom"
+                    text_color: tokens.MUTED
                 MDBoxLayout:
                     size_hint_y: None
-                    height: dp(54)
+                    height: dp(38)
                     spacing: dp(12)
-
-                    IconBadge:
-                        icon: "cube-outline"
-                        bg: tokens.PRIMARY_SOFT
-                        fg: tokens.PRIMARY
-                        size: dp(40), dp(40)
-                        pos_hint: {"center_y": .5}
-
-                    MDBoxLayout:
-                        orientation: "vertical"
-                        size_hint_y: None
-                        height: dp(36)
-                        spacing: dp(1)
-                        pos_hint: {"center_y": .5}
-                        MDLabel:
-                            text: "Model files"
-                            font_size: sp(13)
-                            bold: True
-                            adaptive_height: True
-                            theme_text_color: "Custom"
-                            text_color: tokens.TEXT
-                        MDLabel:
-                            text: "One-time download - about 140 MB"
-                            font_size: sp(10)
-                            adaptive_height: True
-                            theme_text_color: "Custom"
-                            text_color: tokens.MUTED
-
-                    Widget:
-
-                    FloatLayout:
-                        size_hint: None, 1
-                        size: dp(124), 1
-                        MDFillRoundFlatButton:
-                            text: "Download"
-                            font_size: sp(11)
-                            size_hint: None, None
-                            size: dp(112), dp(36)
-                            pos_hint: {"center_x": .5, "center_y": .5}
-                            opacity: 0 if app.models_ready else 1
-                            disabled: app.models_ready or app.download_active
-                            on_release: app.start_model_download()
-                        StatusPill:
-                            text: "Ready"
-                            icon: "check-circle-outline"
-                            bg: tokens.SUCCESS_SOFT
-                            fg: tokens.SUCCESS
-                            opacity: 1 if app.models_ready else 0
-                            disabled: not app.models_ready
-                            pos_hint: {"center_x": .5, "center_y": .5}
-
-                # download progress
-                MDBoxLayout:
-                    orientation: "vertical"
-                    size_hint_y: None
-                    height: dp(34) if app.download_active else 0
-                    opacity: 1 if app.download_active else 0
-                    spacing: dp(3)
-
+                    MDFillRoundFlatIconButton:
+                        text: "Downloading..." if app.download_active else "Download models"
+                        icon: "download"
+                        font_size: sp(11)
+                        size_hint: None, None
+                        size: dp(176), dp(38)
+                        disabled: app.download_active
+                        on_release: app.start_model_download()
                     MDProgressBar:
                         value: app.download_progress_value
                         size_hint_y: None
@@ -200,99 +292,75 @@ Builder.load_string('''
                     MDLabel:
                         text: app.download_status_text
                         font_size: sp(9)
+                        size_hint_x: None
+                        width: dp(120)
+                        halign: "right"
                         theme_text_color: "Custom"
                         text_color: tokens.MUTED
 
-                # Step 2 - engine
+            # --- recent matches -----------------------------------------
+            MDBoxLayout:
+                orientation: "vertical"
+                size_hint_y: None
+                height: self.minimum_height
+                spacing: dp(8)
+
                 MDBoxLayout:
                     size_hint_y: None
-                    height: dp(54)
-                    spacing: dp(12)
-
-                    IconBadge:
-                        icon: "brain"
-                        bg: tokens.SUCCESS_SOFT
-                        fg: tokens.SUCCESS
-                        size: dp(40), dp(40)
+                    height: dp(26)
+                    MDLabel:
+                        text: "Recent matches"
+                        font_size: sp(15)
+                        bold: True
+                        theme_text_color: "Custom"
+                        text_color: tokens.TEXT
+                    Widget:
+                    MDTextButton:
+                        text: "Open folder"
+                        font_size: sp(11)
+                        opacity: 1 if app.is_desktop else 0
+                        disabled: not app.is_desktop
                         pos_hint: {"center_y": .5}
+                        on_release: app.open_outputs_folder()
+
+                MDScrollView:
+                    id: recent_scroll
+                    do_scroll_x: True
+                    do_scroll_y: False
+                    bar_width: 0
+                    size_hint_y: None
+                    height: 0
+                    opacity: 0
 
                     MDBoxLayout:
-                        orientation: "vertical"
-                        size_hint_y: None
-                        height: dp(36)
-                        spacing: dp(1)
-                        pos_hint: {"center_y": .5}
-                        MDLabel:
-                            text: "Face engine"
-                            font_size: sp(13)
-                            bold: True
-                            adaptive_height: True
-                            theme_text_color: "Custom"
-                            text_color: tokens.TEXT
-                        MDLabel:
-                            text: "Runs detection and matching on this device"
-                            font_size: sp(10)
-                            adaptive_height: True
-                            theme_text_color: "Custom"
-                            text_color: tokens.MUTED
+                        id: recent_grid
+                        orientation: "horizontal"
+                        size_hint_y: 1
+                        size_hint_x: None
+                        width: self.minimum_width
+                        spacing: dp(10)
 
-                    Widget:
-
-                    FloatLayout:
-                        size_hint: None, 1
-                        size: dp(124), 1
-                        MDFillRoundFlatButton:
-                            text: "Start"
-                            font_size: sp(11)
-                            size_hint: None, None
-                            size: dp(112), dp(36)
-                            pos_hint: {"center_x": .5, "center_y": .5}
-                            opacity: 0 if app.services_running else 1
-                            disabled: app.services_running or not app.models_ready
-                            on_release: app.start_face_services()
-                        StatusPill:
-                            text: "Running"
-                            icon: "play-circle-outline"
-                            bg: tokens.SUCCESS_SOFT
-                            fg: tokens.SUCCESS
-                            opacity: 1 if app.services_running else 0
-                            disabled: not app.services_running
-                            pos_hint: {"center_x": .5, "center_y": .5}
-
-                MDLabel:
-                    text: "Start the engine to unlock matching and the vault." if not app.services_running else "Ready. Open Face Finder or the vault from the menu."
-                    font_size: sp(10)
-                    halign: "center"
-                    text_size: self.width, None
+                EmptyState:
+                    id: recent_empty
+                    icon: "image-filter-center-focus"
+                    text: "No matches yet"
+                    detail: "Generated photos appear here after a Face Finder run."
                     size_hint_y: None
-                    height: self.texture_size[1]
-                    theme_text_color: "Custom"
-                    text_color: tokens.MUTED
+                    height: dp(112)
 
-                MDFillRoundFlatIconButton:
-                    text: "Continue to Face Finder"
-                    icon: "arrow-right"
-                    font_size: sp(13)
-                    size_hint_y: None
-                    height: dp(46)
-                    disabled: not app.services_running
-                    on_release: app.goto_face_matcher()
-
-            # --- where data lives ---------------------------------------
+            # --- privacy -------------------------------------------------
             AppCard:
                 orientation: "horizontal"
                 size_hint_y: None
                 height: dp(64)
                 padding: dp(14)
                 spacing: dp(12)
-
                 IconBadge:
                     icon: "folder-lock-outline"
                     bg: "#F1F3F9"
                     fg: tokens.MUTED
-                    size: dp(36), dp(36)
+                    size: dp(34), dp(34)
                     pos_hint: {"center_y": .5}
-
                 MDBoxLayout:
                     orientation: "vertical"
                     size_hint_y: None
@@ -312,11 +380,9 @@ Builder.load_string('''
                         adaptive_height: True
                         theme_text_color: "Custom"
                         text_color: tokens.MUTED
-
                 Widget:
-
                 MDTextButton:
-                    text: "Open folder"
+                    text: "Open data folder"
                     font_size: sp(10)
                     opacity: 1 if app.is_desktop else 0
                     disabled: not app.is_desktop
@@ -335,7 +401,7 @@ Builder.load_string('''
 
 
 class InitBox(MDBoxLayout):
-    """Home screen: first-run setup and a shortcut into the app."""
+    """Dashboard: setup state, quick actions and recent results."""
 
     top_pad = NumericProperty(0)
     bottom_pad = NumericProperty(0)
