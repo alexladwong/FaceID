@@ -75,6 +75,11 @@ Run the service tests from `face-ai/app`:
 ./.venv/bin/python -m unittest discover -s tests -v
 ```
 
+On a desktop session, also run the real-pointer UI regression test:
+```bash
+FACEAI_UI_TESTS=1 ./.venv/bin/python -m unittest tests.test_ui_interactions -v
+```
+
 See [`docs/ACCESS_PILOT.md`](docs/ACCESS_PILOT.md) for the data model, PIN/card
 security, administrator rules, webhook contract, configuration and remaining
 production gaps.

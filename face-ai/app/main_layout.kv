@@ -177,14 +177,17 @@ MDScreen:
                 size_hint: None, None
                 x: 0
                 y: 0
-                width: shell.width
-                height: shell.height
+                # A closed scrim must have no hit area. MDCard is a
+                # ButtonBehavior: opacity/disabled alone still intercepts
+                # every click and makes the whole app appear frozen.
+                width: shell.width if app.drawer_open else 0
+                height: shell.height if app.drawer_open else 0
                 radius: [0]
                 elevation: 0
                 md_bg_color: 0, 0, 0, .45
                 border_color: theme.transparent
                 opacity: 0
-                disabled: True
+                disabled: not app.drawer_open
                 on_release: app.close_drawer()
 
             # --- full-height navigation panel -----------------------------

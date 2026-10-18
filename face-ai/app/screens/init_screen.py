@@ -22,6 +22,7 @@ Builder.load_string('''
 #:import IconBadge screens.ui.IconBadge
 #:import QuickAction screens.ui.QuickAction
 #:import StatusPill screens.ui.StatusPill
+#:import TooltipMDIconButton screens.ui.TooltipMDIconButton
 
 
 <InitBox>:
@@ -206,6 +207,18 @@ Builder.load_string('''
                         size: dp(204), dp(42)
                         disabled: app.download_active
                         on_release: app.home_action()
+                    TooltipMDIconButton:
+                        tooltip_text: "Stop face engine"
+                        icon: "stop-circle-outline"
+                        size_hint: None, None
+                        size: dp(42), dp(42)
+                        theme_icon_color: "Custom"
+                        icon_color: theme.error
+                        md_bg_color: theme.error_soft
+                        opacity: 1 if app.services_running else 0
+                        disabled: not app.services_running
+                        width: dp(42) if app.services_running else 0
+                        on_release: app.stop_face_services()
                     MDFillRoundFlatIconButton:
                         text: "Open vault"
                         icon: "shield-lock-outline"

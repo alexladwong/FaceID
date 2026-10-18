@@ -132,6 +132,7 @@ class FaceAiApp(MDApp):
     nav_collapsed = BooleanProperty(False)
     show_rail = BooleanProperty(False)
     rail_compact = BooleanProperty(False)
+    drawer_open = BooleanProperty(False)
     current_screen = StringProperty("initScreen")
     current_page_title = StringProperty("Home")
     home_action_label = StringProperty("Start face engine")
@@ -214,7 +215,7 @@ class FaceAiApp(MDApp):
             "reduce_motion": False
         }
         self.is_wide = Window.width >= 980
-        self._drawer_open = False
+        self.drawer_open = False
         self._access_register_requested = False
         self.access_svc = None
         self.door = None
@@ -274,7 +275,7 @@ class FaceAiApp(MDApp):
                 return
         self._set_nav_flags(width)
         if self.root:
-            if self.show_rail and self._drawer_open:
+            if self.show_rail and self.drawer_open:
                 self.close_drawer()
             self._apply_nav_mode()
             self.refresh_recent_outputs()
@@ -296,7 +297,7 @@ class FaceAiApp(MDApp):
             self.nav_offset = panel.width
             panel.x = 0
             panel.disabled = False
-            self._drawer_open = False
+            self.drawer_open = False
             if scrim is not None:
                 scrim.opacity = 0
                 scrim.disabled = True
@@ -304,7 +305,7 @@ class FaceAiApp(MDApp):
             panel.width = dp(248)
             self.nav_offset = 0
             panel.disabled = False
-            if not self._drawer_open:
+            if not self.drawer_open:
                 panel.x = -panel.width
                 # The kv width binding settles after this resize event; pin
                 # the closed position to the final width so the rail cannot
@@ -341,7 +342,7 @@ class FaceAiApp(MDApp):
             return
         panel = self.root.ids.nav_panel
         scrim = self.root.ids.drawer_scrim
-        self._drawer_open = True
+        self.drawer_open = True
         panel.x = -panel.width
         scrim.disabled = False
         if self.reduce_motion:
@@ -358,8 +359,8 @@ class FaceAiApp(MDApp):
         scrim = self.root.ids.get("drawer_scrim")
         if panel is None:
             return
-        was_open = self._drawer_open
-        self._drawer_open = False
+        was_open = self.drawer_open
+        self.drawer_open = False
         if self.show_rail:
             Animation.cancel_all(panel)
             panel.x = 0
@@ -416,7 +417,7 @@ class FaceAiApp(MDApp):
 
     def _on_key_down(self, window, key, scancode, codepoint, modifiers):
         if key == 27:
-            if self._drawer_open:
+            if self.drawer_open:
                 self.close_drawer()
                 return True
             dialog = getattr(self, "txt_dialog", None)
@@ -476,7 +477,7 @@ class FaceAiApp(MDApp):
             "settingsScr": "Settings",
         }.get(name, "Home")
         self._set_nav_selection(name)
-        if self._drawer_open:
+        if self.drawer_open:
             self.close_drawer()
 
     def _set_nav_selection(self, current):
@@ -2234,6 +2235,26 @@ class FaceAiApp(MDApp):
                 is_error=True,
             )
 
+    def stop_face_services(self, instance=None):
+        if not self.services_running and not self.face_ai:
+            self.show_toast_msg("The face engine is already stopped.")
+            return
+        self.stop_camera()
+        self.face_ai = None
+        self.services_running = False
+        self.is_onnx_running = False
+        self.login_success = False
+        self.sec_file_box = None
+        if self.access_svc is not None:
+            self.access_svc.face_ai = None
+        self._refresh_access_status()
+        if self.current_screen == "securityScr":
+            self.on_security_enter()
+        card = self._access_camera_card()
+        if card is not None:
+            card.status = "Engine off"
+        self.show_toast_msg("Face engine stopped.")
+
     def goto_face_matcher(self, instance=None):
         self.goto_screen("faceFindScr")
 
@@ -2619,8 +2640,8 @@ class FaceAiApp(MDApp):
                 self.show_toast_msg("File deleted.")
                 print(f"Deleted: {self.delete_file_path}")
                 self.delete_file_path = None
-                if self.last_instance and self.last_instance.parent:
-                    Clock.schedule_once(lambda dt: self.last_instance.parent.remove_widget(self.last_instance))
+                # The vault list rebuild removes the row; removing it again
+                # from a delayed callback can touch a detached widget.
                 self.refresh_output_count()
                 self.refresh_recent_outputs()
                 if self.sec_file_box:

@@ -254,6 +254,13 @@ class NavigationMenu(MDBoxLayout):
 
     screen_manager = ObjectProperty(None)
 
+    def on_touch_down(self, touch):
+        # The drawer menu and the compact rail share one panel. Never let the
+        # hidden variant dispatch touches through its still-laid-out children.
+        if self.disabled:
+            return False
+        return super().on_touch_down(touch)
+
 
 Builder.load_string('''
 #:import theme screens.palette.theme
@@ -370,4 +377,7 @@ Builder.load_string('''
 
 
 class CompactNav(MDBoxLayout):
-    pass
+    def on_touch_down(self, touch):
+        if self.disabled:
+            return False
+        return super().on_touch_down(touch)

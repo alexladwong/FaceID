@@ -101,11 +101,27 @@ Existing components: `AppCard`, `IconBadge`, `Pill`, `StatusPill`,
   measured from the fields, not a fixed height, so short PIN forms stay compact
   and the registration form scrolls on a phone. Cancel is always present.
 
+## Interaction integrity
+
+- The mobile drawer scrim only exists — including its hit area — while the
+  drawer is open. `MDCard` is a `ButtonBehavior`, so an opacity-0/disabled
+  full-screen scrim still swallows every pointer event. Closed scrims get zero
+  size; this was the cause of the app appearing completely unresponsive.
+- The labelled rail, compact rail and drawer share one panel. Hidden variants
+  are disabled and their `on_touch_down` returns `False`, so hidden children
+  cannot steal a click from the visible navigation.
+- Dialogs and file pickers are modal only while open; dismissing one restores
+  interaction with the page underneath. The closed-drawer scrim and hidden
+  navigation variants are covered by real-pointer regression tests.
+- Home exposes both **Start face engine** and **Stop face engine**. Stopping
+  tears down the camera, engine service handles, vault session and Access face
+  capability; it does not merely change a badge.
+
 ## States and feedback
 
 - Engine, model, vault, and door statuses use live app properties. Vault shows
   `Locked` unless the current session has been unlocked; leaving the vault
-  locks it again.
+  locks it again. Stopping the engine locks the vault and disables face access.
 - Routine success uses the compact toast. Errors stay for at least 6 seconds
   and errors that need action also appear inline (for example Face Finder
   failure states).
@@ -140,6 +156,8 @@ Existing components: `AppCard`, `IconBadge`, `Pill`, `StatusPill`,
 - `Esc`: close the drawer or an open dialog.
 - Text fields and navigation items have visible focus/pressed states from
   KivyMD. The register, manage and export icon actions have tooltips.
+- `Ctrl/Cmd+1..6` navigation is tested with actual key dispatch, not just a
+  direct handler call.
 - Access/People actions use 42–48 px touch targets. Credential fields are
   password fields for PINs and never display a stored PIN.
 - Full screen-reader labelling and a complete keyboard focus order for every
@@ -170,6 +188,20 @@ Existing components: `AppCard`, `IconBadge`, `Pill`, `StatusPill`,
 | 420 × 820 (large phone) | yes | yes | Home, drawer, dialogs, Face Finder |
 | 360 × 800 (phone) | yes | yes | Home, Face Finder, Access, People, Settings, vault, registration, administrator PIN setup |
 | 320 × 700 (small phone) | yes | yes | Home, shell, quick actions |
+
+### Interaction test
+
+```bash
+cd app
+FACEAI_UI_TESTS=1 ./.venv/bin/python -m unittest tests.test_ui_interactions -v
+```
+
+The desktop-only test dispatches real mouse down/up events through `Window`.
+It covers navigation, quick actions, theme/help, engine start/stop, Access
+dialogs and registration, People filters, Settings confirmation, compact rail,
+drawer scrim, keyboard shortcuts, vault upload/download/delete and Face Finder
+image selection/matching. It is skipped in headless CI unless the environment
+variable is set.
 
 Only macOS was available for runtime testing in this environment. Android,
 iOS, Windows and Linux builds must be smoke-tested on their targets before a
