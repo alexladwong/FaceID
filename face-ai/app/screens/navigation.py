@@ -4,12 +4,28 @@ from kivy.lang import Builder
 from kivy.properties import ObjectProperty
 
 from kivymd.uix.boxlayout import MDBoxLayout
+from kivymd.uix.navigationdrawer import MDNavigationDrawerItem
+
+
+class _DrawerMenuStub:
+    """KivyMD items call reset_active_color on release; the rail is not a
+    MDNavigationDrawerMenu, so provide a no-op implementation."""
+
+    def reset_active_color(self, item):
+        pass
+
+
+class NavItem(MDNavigationDrawerItem):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        if self._drawer_menu is None:
+            self._drawer_menu = _DrawerMenuStub()
 
 
 Builder.load_string('''
 #:import tokens screens.tokens
 
-<NavItem@MDNavigationDrawerItem>
+<NavItem>:
     radius: [dp(12)]
     focus_color: 0.31, 0.27, 0.9, 0.10
     ripple_color: 0.31, 0.27, 0.9, 0.06
