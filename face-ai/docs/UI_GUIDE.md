@@ -45,9 +45,14 @@ Existing components: `AppCard`, `IconBadge`, `Pill`, `StatusPill`,
   destinations are never identified by text colour alone.
 - The rail collapses to an 80 px icon rail with tooltips. The chevron in the
   brand row collapses it; the chevron in the icon rail restores it.
-- Below 980 px the rail slides away. The context-bar menu opens the same
-  grouped navigation as a 248 px drawer with a scrim and an explicit close
-  button; Escape, the scrim, or choosing a destination closes it.
+- From 760–979 px the compact 80 px rail stays visible so a normal desktop
+  window never loses navigation. Below 760 px the rail slides away; the
+  context-bar menu opens the same grouped navigation as a 248 px drawer with a
+  scrim and an explicit close button. Escape, the scrim, or choosing a
+  destination closes it.
+- Navigation items act on release, not press, so dragging/scrolling the rail
+  does not change screens. The context bar always shows the current page title,
+  including on phones; the product mark lives in the rail/drawer.
 - The navigation list scrolls independently on short screens, with privacy and
   version anchored at the bottom.
 - The neutral 58 px context bar carries the current workspace label, live
@@ -55,7 +60,10 @@ Existing components: `AppCard`, `IconBadge`, `Pill`, `StatusPill`,
 
 ## Responsive rules
 
-- Breakpoint: `app.is_wide` is true at **980 px** and above.
+- Layout breakpoint: `app.is_wide` is true at **980 px** and above. A separate
+  navigation breakpoint keeps the compact rail visible down to **760 px**.
+- Desktop windows are snapped to even dimensions before layout. The SDL/OpenGL
+  surface on macOS shears at odd logical widths; this keeps resizing clean.
 - Two-column content (vault auth, Face Finder and Access camera/actions)
   becomes one column.
 - The Access camera preview shrinks on phones so the primary actions and result
@@ -156,7 +164,9 @@ Existing components: `AppCard`, `IconBadge`, `Pill`, `StatusPill`,
 | Viewport | Light | Dark | Screens checked |
 | --- | --- | --- | --- |
 | 1200 × 820 (desktop) | yes | yes | Home, Face Finder, Vault, Settings, Access, People, registration, alternative access, person sheet |
-| 760 × 820 (small laptop/tablet) | yes | yes | shell, drawer, Face Finder, Home |
+| 800 × 700 (small desktop window) | yes | yes | compact rail, Access, page title |
+| 760 × 820 (small laptop/tablet) | yes | yes | compact rail, shell, Home |
+| 756 × 700 (drawer threshold) | yes | yes | drawer, scrim, destination change |
 | 420 × 820 (large phone) | yes | yes | Home, drawer, dialogs, Face Finder |
 | 360 × 800 (phone) | yes | yes | Home, Face Finder, Access, People, Settings, vault, registration, administrator PIN setup |
 | 320 × 700 (small phone) | yes | yes | Home, shell, quick actions |

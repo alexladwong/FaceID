@@ -53,7 +53,7 @@ Builder.load_string('''
 <NavigationMenu>:
     orientation: "vertical"
     on_pos: self.do_layout()
-    padding: dp(12), dp(14), dp(12), dp(10)
+    padding: (dp(20) if not app.show_rail else dp(12)), dp(14), dp(12), dp(10)
     spacing: 0
 
     # --- brand ---------------------------------------------------------
@@ -152,7 +152,7 @@ Builder.load_string('''
             NavItem:
                 icon: "view-dashboard-outline"
                 text: "Home"
-                on_press: app.goto_screen("initScreen")
+                on_release: app.goto_screen("initScreen")
 
             MDLabel:
                 text: "FACE TOOLS"
@@ -167,12 +167,12 @@ Builder.load_string('''
             NavItem:
                 icon: "account-search-outline"
                 text: "Face Finder"
-                on_press: app.goto_screen("faceFindScr")
+                on_release: app.goto_screen("faceFindScr")
 
             NavItem:
                 icon: "shield-lock-outline"
                 text: "Secure Vault"
-                on_press: app.goto_screen("securityScr")
+                on_release: app.goto_screen("securityScr")
 
             MDLabel:
                 text: "DOOR ACCESS"
@@ -187,12 +187,12 @@ Builder.load_string('''
             NavItem:
                 icon: "door-open"
                 text: "Access"
-                on_press: app.goto_screen("accessScr")
+                on_release: app.goto_screen("accessScr")
 
             NavItem:
                 icon: "account-group-outline"
                 text: "People"
-                on_press: app.goto_screen("peopleScr")
+                on_release: app.goto_screen("peopleScr")
 
             MDLabel:
                 text: "SYSTEM"
@@ -207,7 +207,7 @@ Builder.load_string('''
             NavItem:
                 icon: "tune-variant"
                 text: "Settings"
-                on_press: app.goto_screen("settingsScr")
+                on_release: app.goto_screen("settingsScr")
 
     # --- footer --------------------------------------------------------
     MDCard:
@@ -296,7 +296,9 @@ Builder.load_string('''
         theme_icon_color: "Custom"
         icon_color: theme.muted
         size_hint_y: None
-        height: dp(36)
+        height: dp(36) if app.is_wide else 0
+        opacity: 1 if app.is_wide else 0
+        disabled: not app.is_wide
         pos_hint: {"center_x": .5}
         on_release: app.toggle_nav_collapse()
 

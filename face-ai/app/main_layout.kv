@@ -50,15 +50,15 @@ MDScreen:
 
                     MDBoxLayout:
                         size_hint_x: None
-                        width: dp(44) if not app.is_wide else 0
-                        disabled: app.is_wide
+                        width: dp(44) if not app.show_rail else 0
+                        disabled: app.show_rail
                         MDIconButton:
                             icon: "menu"
                             icon_size: dp(22)
                             theme_icon_color: "Custom"
                             icon_color: theme.text
-                            opacity: 1 if not app.is_wide else 0
-                            disabled: app.is_wide
+                            opacity: 1 if not app.show_rail else 0
+                            disabled: app.show_rail
                             on_release: app.open_drawer()
 
                     MDBoxLayout:
@@ -77,9 +77,11 @@ MDScreen:
                             theme_text_color: "Custom"
                             text_color: theme.muted
                         MDLabel:
-                            text: app.current_page_title if app.is_wide else "Face AI"
+                            text: app.current_page_title
                             font_size: sp(14)
                             bold: True
+                            shorten: True
+                            shorten_from: "right"
                             theme_text_color: "Custom"
                             text_color: theme.text
 
@@ -191,7 +193,7 @@ MDScreen:
                 size_hint: None, None
                 x: 0
                 y: 0
-                width: dp(80) if app.is_wide and app.nav_collapsed else dp(248)
+                width: dp(80) if app.rail_compact else dp(248)
                 height: shell.height
                 radius: [0]
                 elevation: 0
@@ -211,13 +213,13 @@ MDScreen:
                         id: nav_menu
                         size_hint: 1, 1
                         pos_hint: {"x": 0, "y": 0}
-                        opacity: 0 if app.is_wide and app.nav_collapsed else 1
-                        disabled: app.is_wide and app.nav_collapsed
+                        opacity: 0 if app.rail_compact else 1
+                        disabled: app.rail_compact
                     CompactNav:
                         id: compact_nav
                         size_hint: 1, 1
                         pos_hint: {"x": 0, "y": 0}
-                        opacity: 1 if app.is_wide and app.nav_collapsed else 0
-                        disabled: not (app.is_wide and app.nav_collapsed)
+                        opacity: 1 if app.rail_compact else 0
+                        disabled: not app.rail_compact
 
 # End

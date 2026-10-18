@@ -130,6 +130,8 @@ class FaceAiApp(MDApp):
     is_wide = BooleanProperty(False)
     nav_offset = NumericProperty(dp(248))
     nav_collapsed = BooleanProperty(False)
+    show_rail = BooleanProperty(False)
+    rail_compact = BooleanProperty(False)
     current_screen = StringProperty("initScreen")
     current_page_title = StringProperty("Home")
     home_action_label = StringProperty("Start face engine")
@@ -251,14 +253,28 @@ class FaceAiApp(MDApp):
         if self.is_desktop:
             Window.size = self.initial_window_size
             Window.clearcolor = get_color_from_hex(theme.surface)
-        self.is_wide = Window.width >= 980
+        self._set_nav_flags(Window.width)
         return Builder.load_file(kv_file_path)
 
     # -- responsive shell / dashboard helpers ------------------------
-    def _on_window_resize(self, window, width, height):
+    def _set_nav_flags(self, width):
         self.is_wide = width >= 980
+        self.show_rail = width >= 760
+        # Between the phone drawer and the full rail, keep a compact icon rail
+        # visible. A desktop window at 800 px should still expose navigation.
+        self.rail_compact = self.show_rail and (self.nav_collapsed or width < 980)
+
+    def _on_window_resize(self, window, width, height):
+        # The SDL/OpenGL surface on macOS shears on odd logical widths.
+        # Snap desktop windows to even dimensions before laying out.
+        if self.is_desktop and (int(width) % 2 or int(height) % 2):
+            target = (max(2, int(width) - int(width) % 2), max(2, int(height) - int(height) % 2))
+            if target != (int(width), int(height)):
+                Window.size = target
+                return
+        self._set_nav_flags(width)
         if self.root:
-            if self.is_wide:
+            if self.show_rail and self._drawer_open:
                 self.close_drawer()
             self._apply_nav_mode()
             self.refresh_recent_outputs()
@@ -274,8 +290,9 @@ class FaceAiApp(MDApp):
         Animation.cancel_all(panel)
         if scrim is not None:
             Animation.cancel_all(scrim)
-        if self.is_wide:
-            panel.width = dp(80) if self.nav_collapsed else dp(248)
+        self.rail_compact = self.show_rail and (self.nav_collapsed or not self.is_wide)
+        if self.show_rail:
+            panel.width = dp(80) if self.rail_compact else dp(248)
             self.nav_offset = panel.width
             panel.x = 0
             panel.disabled = False
@@ -312,13 +329,15 @@ class FaceAiApp(MDApp):
         )
 
     def toggle_nav_collapse(self, instance=None):
+        # A compact rail below 980 px is intentional; only a wide window can
+        # expand to the labelled rail.
         if not self.is_wide:
             return
         self.nav_collapsed = not self.nav_collapsed
         self._apply_nav_mode()
 
     def open_drawer(self, instance=None):
-        if self.is_wide or not self.root:
+        if self.show_rail or not self.root:
             return
         panel = self.root.ids.nav_panel
         scrim = self.root.ids.drawer_scrim
@@ -341,7 +360,7 @@ class FaceAiApp(MDApp):
             return
         was_open = self._drawer_open
         self._drawer_open = False
-        if self.is_wide:
+        if self.show_rail:
             Animation.cancel_all(panel)
             panel.x = 0
             if scrim is not None:
@@ -411,7 +430,10 @@ class FaceAiApp(MDApp):
         if not meta:
             return False
         screen = self.root.ids.screen_manager.current if self.root else ""
-        if codepoint in ("1", "2", "3", "4", "5", "6"):
+        shortcut = (codepoint or "").lower()
+        if not shortcut and key in (49, 50, 51, 52, 53, 54):
+            shortcut = str(key - 48)
+        if shortcut in ("1", "2", "3", "4", "5", "6"):
             target = {
                 "1": "initScreen",
                 "2": "accessScr",
@@ -419,19 +441,19 @@ class FaceAiApp(MDApp):
                 "4": "faceFindScr",
                 "5": "securityScr",
                 "6": "settingsScr",
-            }[codepoint]
+            }[shortcut]
             self.goto_screen(target)
             return True
-        if codepoint == "o" and screen == "faceFindScr":
+        if shortcut == "o" and screen == "faceFindScr":
             self.open_img_file_manager(self.img_purpose or "src")
             return True
-        if codepoint == "r" and screen == "faceFindScr":
+        if shortcut == "r" and screen == "faceFindScr":
             self.reset_face_matcher()
             return True
-        if codepoint == "l" and screen == "securityScr":
+        if shortcut == "l" and screen == "securityScr":
             self.lock_vault()
             return True
-        if codepoint == "h":
+        if shortcut == "h":
             self.show_help_dialog()
             return True
         return False
