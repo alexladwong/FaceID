@@ -3,36 +3,65 @@
 </p><h1 align="center">Face AI</h1><p align="center">
   <strong>Offline Face Recognition. Intelligent Security. Cross-Platform Privacy.</strong>
 </p><p align="center">
-  An open-source application for face detection, facial recognition, and privacy-focused access control, powered by on-device AI.
+  An open-source facial recognition and computer vision application developed by Ladwong Developers.
 </p><p align="center">
-  <img src="https://img.shields.io/badge/AI-Offline%20Inference-0D9488?style=for-the-badge" alt="Offline AI" />
-  <img src="https://img.shields.io/badge/Python-3.x-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python" />
-  <img src="https://img.shields.io/badge/OpenCV-Computer%20Vision-5C3EE8?style=for-the-badge" alt="OpenCV" />
-  <img src="https://img.shields.io/badge/ONNX-Runtime-005CED?style=for-the-badge" alt="ONNX Runtime" />
-  <img src="https://img.shields.io/badge/License-See%20Repository-lightgrey?style=for-the-badge" alt="License" />
+  <a href="https://github.com/alexladwong">
+    <img src="https://img.shields.io/badge/GitHub-Alex%20Ladwong-181717?style=for-the-badge&logo=github" alt="GitHub" />
+  </a>
+  <a href="https://www.ladwongdevelopers.dev">
+    <img src="https://img.shields.io/badge/Developer-Ladwong%20Developers-0D9488?style=for-the-badge" alt="Ladwong Developers" />
+  </a>
+  <img src="https://img.shields.io/badge/AI-Offline%20Inference-2563EB?style=for-the-badge" alt="Offline AI" />
+  <img src="https://img.shields.io/badge/Python-Computer%20Vision-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python" />
+</p><p align="center">
+  <a href="https://github.com/alexladwong">GitHub</a> ·
+  <a href="https://www.ladwongdevelopers.dev">Website</a> ·
+  <a href="https://www.ladwongdevelopers.dev/projects">Projects</a> ·
+  <a href="https://www.linkedin.com/in/ap-kintu-alex-ladwong-omega1984/">LinkedIn</a> ·
+  <a href="https://www.youtube.com/@MilkyWay-y2k25">YouTube</a>
 </p>---
 
-Overview
+About Face AI
 
-Face AI is an open-source, cross-platform application that brings face detection and facial recognition directly to your device.
+Face AI is an offline-first facial recognition and computer vision application developed under Ladwong Developers.
 
-Built with Python, Kivy, and KivyMD, the application combines computer vision and ONNX-based machine learning models to process facial data locally.
+The project combines Python, Kivy, KivyMD, OpenCV, NumPy, and ONNX Runtime to bring face detection and recognition capabilities directly to supported devices.
 
-The goal is simple: deliver practical facial recognition capabilities without making a cloud service or continuous internet connection a requirement for core recognition features.
+Its mission is to make on-device artificial intelligence practical for privacy-conscious applications, including identity verification, access control, and protected file management.
 
-From recognizing registered users to protecting sensitive files, Face AI provides a foundation for privacy-conscious, AI-powered security applications.
+By prioritizing local inference, Face AI aims to reduce reliance on cloud-based recognition services and give users greater control over their facial data.
+
+Project Objectives
+
+- Build an offline-capable facial recognition system.
+- Process facial images locally on supported platforms.
+- Provide a foundation for facial identity verification.
+- Integrate recognition with access-control workflows.
+- Support privacy-conscious handling of sensitive files.
+- Develop a maintainable, cross-platform Python application.
+- Explore the intersection of artificial intelligence, computer vision, and cybersecurity.
 
 Why Face AI?
 
-- Offline AI: Run supported face detection and recognition models locally.
-- Privacy-focused processing: Keep facial processing on the device during offline operation.
-- Facial recognition: Compare facial representations to identify potential matches against registered users.
-- Secure file access: Support facial verification workflows for protected files.
-- Cross-platform development: Build on a shared Python codebase for supported desktop and mobile platforms.
-- Open-source development: Inspect, customize, and extend the application.
-- Hardware-assisted inference: Use supported ONNX Runtime execution providers when available.
+Local AI Processing
+Run supported facial detection and recognition models on-device without requiring a continuous internet connection.
 
-«Important: Facial recognition is a verification signal, not an infallible security mechanism. Production deployments should include liveness detection where appropriate, secure credential recovery, rate limiting, and additional authentication for high-risk operations.»
+Privacy-Focused Design
+Minimize unnecessary transmission of facial information to external services.
+
+Intelligent Recognition
+Generate facial embeddings and compare them with enrolled identity templates.
+
+Security Integration
+Connect facial verification to authorization workflows and protected resources.
+
+Cross-Platform Development
+Build on a shared Python application architecture, subject to platform and dependency compatibility.
+
+Open-Source Development
+Encourage code inspection, testing, contributions, and further development.
+
+«Security notice: Facial recognition is probabilistic. A successful match does not independently guarantee identity or prevent spoofing. High-security deployments should consider liveness detection, additional authentication factors, rate limiting, and secure recovery procedures.»
 
 ---
 
@@ -40,101 +69,103 @@ Core Features
 
 1. Face Detection
 
-Detect faces in supported image and camera inputs using ONNX-based computer vision models.
+Detect faces in supported camera streams and image inputs using computer vision and ONNX-based models.
 
-Capabilities include:
+The detection pipeline can support:
 
-- Face localization in images.
+- Face localization.
 - Camera-based face detection.
-- Bounding-box visualization.
-- Face-region extraction for subsequent recognition.
-- Local inference without requiring a cloud API.
+- Facial bounding boxes.
+- Face-region extraction.
+- Image preprocessing.
+- Local model inference.
 
 2. Facial Recognition
 
-Generate facial embeddings and compare them against enrolled identities.
+Generate numerical facial representations, known as embeddings, and compare them against registered identities.
 
 The recognition pipeline can support:
 
-- Face enrollment.
-- Facial embedding generation.
-- Similarity-based matching.
-- Registered identity management.
+- Facial enrollment.
+- Embedding generation.
+- Similarity-based comparison.
+- Identity matching.
 - Configurable recognition thresholds.
 - Local identity lookup.
 
-Recognition accuracy depends on model quality, enrollment images, lighting, camera conditions, pose, and threshold configuration.
+Recognition performance depends on lighting, camera quality, pose, model configuration, enrollment data, and threshold selection.
 
-3. Secure File Vault
+3. Secure File Access
 
-Protect sensitive files behind a facial verification workflow.
+Face AI can support facial verification as part of a protected-file access workflow.
 
-Depending on the platform and implementation, the vault can support:
+Potential capabilities include:
 
-- Enrollment-based access authorization.
-- Protected-file storage.
-- Encrypted file handling on desktop platforms.
+- Facial verification before access.
+- Protected-file management.
+- Encrypted file storage.
 - Authentication state management.
 - Access-denial handling.
-- Secure recovery mechanisms.
+- Secure credential recovery.
 
-Security requirement: Facial recognition must not be treated as encryption. Files should remain encrypted at rest using established cryptographic libraries and properly managed encryption keys. Successful recognition should authorize a controlled key-release or decryption operation.
+Security principle: Facial recognition must not be used as a substitute for encryption. Sensitive files should remain encrypted at rest, and successful verification should authorize a carefully controlled decryption or key-release operation.
 
-4. Offline-First Architecture
+4. Offline-First AI
 
-The core recognition pipeline is designed to operate locally.
+The application is designed to perform supported facial recognition operations locally.
 
-Once the application, required dependencies, and model files are installed, supported recognition operations can run without an internet connection.
+After the required application dependencies and model files have been installed, core recognition workflows should be testable without internet connectivity.
 
-Offline operation depends on the availability of the required models and runtime components on the target device.
+Offline operation must be verified against the actual application, including model loading, runtime dependencies, and any external services used by other features.
 
-5. Cross-Platform Application
+5. Cross-Platform Development
 
-The project uses Kivy and KivyMD to provide a shared application interface.
+The application uses Kivy and KivyMD for its interface.
 
-Platform support and packaging requirements differ:
+Platform| Target| Packaging approach
+Windows| Desktop| PyInstaller
+Linux| Desktop| PyInstaller
+macOS| Desktop| PyInstaller or native packaging
+Android| Mobile| Buildozer
+iOS| Potential future target| Requires platform-specific validation
 
-Platform| Intended support| Packaging approach
-Windows| Desktop application| PyInstaller
-Linux| Desktop application| PyInstaller
-macOS| Desktop application| PyInstaller or platform-native packaging
-Android| Mobile application| Buildozer
-iOS| Potential mobile deployment| Requires platform-specific compatibility and packaging validation
-
-Not every dependency or model runtime is necessarily supported on every platform. Validate camera access, ONNX Runtime compatibility, model inference, and secure storage independently for each target.
+Actual support depends on the compatibility of Python dependencies, camera access, ONNX Runtime, native libraries, and secure-storage mechanisms.
 
 ---
 
 System Architecture
 
-Face AI separates user interaction, computer vision, model inference, and access-control operations into a processing pipeline.
+Face AI separates image acquisition, face detection, recognition, and authorization into distinct stages.
 
 flowchart TD
     A[Camera or Image Input] --> B[Input Validation]
     B --> C[Face Detection]
     C --> D[Face Alignment and Preprocessing]
-    D --> E[ONNX Face Recognition Model]
+    D --> E[ONNX Recognition Model]
     E --> F[Facial Embedding]
     F --> G[Similarity Comparison]
     G --> H{Recognition Threshold}
-    H -->|Match| I[Identity Verification]
-    H -->|No Match| J[Access Denied]
+
+    H -->|Potential Match| I[Identity Verification]
+    H -->|No Match| J[Reject Attempt]
+
     I --> K[Authorization Policy]
     K --> L[Protected Resource Access]
-    J --> M[Record Security Event]
 
-Processing stages
+    J --> M[Security Event Handling]
 
-1. Input acquisition: Receive frames from a supported camera or load an image.
-2. Face detection: Locate faces in the input.
-3. Preprocessing: Align and normalize detected faces according to the recognition model's requirements.
-4. Embedding generation: Run the recognition model to produce a numerical representation of the face.
-5. Similarity comparison: Compare the embedding with enrolled templates.
-6. Identity verification: Determine whether the match satisfies the configured threshold.
-7. Authorization: Apply application-specific permissions before granting access.
+Processing Pipeline
+
+1. Image acquisition: Receive camera frames or supported image inputs.
+2. Face detection: Locate faces within the input.
+3. Preprocessing: Align and normalize facial regions according to the model requirements.
+4. Embedding generation: Generate a facial representation using the recognition model.
+5. Similarity comparison: Compare the representation against enrolled templates.
+6. Identity verification: Evaluate the result against the configured recognition threshold.
+7. Authorization: Apply the relevant access-control policy.
 8. Security handling: Reject unsuccessful attempts and record appropriate security events.
 
-A recognition match should never automatically grant unrestricted access. Authorization must remain a separate decision.
+A recognition result and an authorization decision are separate operations. A recognized identity must not automatically receive unrestricted access.
 
 ---
 
@@ -142,44 +173,46 @@ Technology Stack
 
 Technology| Purpose
 Python| Application logic and AI integration
-Kivy| Cross-platform application interface
-KivyMD| Material Design interface components
+Kivy| Cross-platform user interface
+KivyMD| Material Design components
 OpenCV| Image processing and computer vision
-NumPy| Numerical operations and embedding comparison
-ONNX Runtime| Local machine-learning inference
-ONNX models| Face detection and facial recognition
-PyInstaller| Desktop application packaging
+NumPy| Numerical computation
+ONNX Runtime| Machine-learning inference
+ONNX models| Face detection and recognition
+PyInstaller| Desktop packaging
 Buildozer| Android packaging
 
-The exact supported versions should be determined by the project's dependency files and tested build environments.
+Dependency versions should be maintained and tested using the project's requirements files and platform-specific build configuration.
 
 ---
 
 AI Models
 
-Face AI uses ONNX models for local inference.
+Face AI uses ONNX models for local facial detection and recognition.
 
 Model| Purpose| Approximate size
 "det_10g.onnx"| Face detection| 17 MB
 "arc.onnx"| Facial recognition| 137 MB
 
-Model sizes are approximate and may vary depending on the distributed files.
+Sizes are approximate and may differ between model distributions.
 
-Model sources
+Face Detection Model
 
-Face detection — "det_10g.onnx"
+Model: "det_10g.onnx"
 
 Source: "InsightFace Buffalo_L model package" (https://github.com/deepinsight/insightface/releases/download/v0.7/buffalo_l.zip)
 
-Face recognition — "arc.onnx"
+Facial Recognition Model
+
+Model: "arc.onnx"
 
 Source: "ArcFace ONNX model repository" (https://huggingface.co/garavv/arcface-onnx/tree/main)
 
-Model licensing
+Model Licensing
 
-Before redistributing model files or incorporating them into commercial distributions, review the applicable licenses, terms of use, and redistribution restrictions for each model.
+Before distributing model files or incorporating them into commercial products, review their applicable licenses and terms of use.
 
-The application's source-code license does not automatically determine the licenses of third-party models and dependencies.
+The licensing of the application source code does not automatically grant permission to redistribute third-party models.
 
 ---
 
@@ -187,21 +220,25 @@ Installation
 
 Prerequisites
 
-Install the following before running Face AI:
+You will need:
 
-- Python compatible with the project's dependency files.
+- Python compatible with the project dependencies.
 - Git.
-- A working camera, if using live recognition.
-- Sufficient storage for model files and dependencies.
+- Sufficient disk space for models and dependencies.
+- A supported camera for live recognition.
 
-For the best results, use a dedicated Python virtual environment.
+A Python virtual environment is recommended.
 
-1. Clone the repository
+1. Obtain the Repository
 
-git clone https://github.com/daslearning-org/face-ai.git
+Clone your Face AI repository using its actual GitHub URL:
+
+git clone YOUR_FACE_AI_REPOSITORY_URL
 cd face-ai
 
-2. Create a virtual environment
+Replace "YOUR_FACE_AI_REPOSITORY_URL" with the repository URL published under your GitHub account.
+
+2. Create a Virtual Environment
 
 macOS and Linux
 
@@ -213,61 +250,52 @@ Windows PowerShell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 
-3. Install dependencies
+3. Install Dependencies
 
 cd app
+
 python -m pip install --upgrade pip
 pip install -r requirements.txt
 
-If your platform requires a different dependency set, consult the corresponding requirements file.
+Use the appropriate requirements file for your platform.
 
-4. Launch the application
+4. Launch Face AI
 
 python main.py
 
-If the application fails to start, check the Python version, dependency compatibility, camera permissions, model paths, and ONNX Runtime installation.
+If startup fails, check the Python version, dependency compatibility, camera permissions, model paths, and ONNX Runtime installation.
 
 ---
 
 Running Face AI Offline
 
-To operate without an internet connection:
+To test offline functionality:
 
-1. Install the application and its dependencies.
-2. Obtain the required model files from their approved sources.
-3. Place the models in the paths expected by the application.
-4. Complete initial configuration and user enrollment.
-5. Verify that both detection and recognition work locally.
-6. Disconnect from the internet and repeat the recognition tests.
+1. Install the application and required dependencies.
+2. Obtain the required model files.
+3. Place the models in the expected application directories.
+4. Complete the required configuration and enrollment.
+5. Verify face detection and recognition.
+6. Disconnect the device from the internet.
+7. Repeat the recognition tests.
 
-The application should not attempt to download models or contact remote inference services during offline recognition.
+The core recognition pipeline should not require remote inference services during offline operation.
 
-For a verifiable offline deployment, inspect network activity and test all required workflows while disconnected.
+For stronger assurance, inspect network activity and verify that all required assets are available locally.
 
 ---
 
 Building for Android
 
-Android builds require a compatible Linux environment. Windows developers can use WSL or a virtual machine where supported.
+Android packaging requires a compatible development environment and supported versions of Buildozer, Python, and python-for-android.
 
-1. Prepare the build environment
+1. Prepare the Environment
 
-Install the system dependencies documented by the relevant Buildozer and python-for-android versions.
+Install the system dependencies required by your selected Buildozer version, including the appropriate Java Development Kit, build tools, and Android SDK/NDK components.
 
-Typical dependencies include:
+2. Install Android Dependencies
 
-- Git
-- Java Development Kit
-- C/C++ build tools
-- Python development headers
-- Build tools and package utilities
-- Android SDK and NDK components managed by the build environment
-
-2. Create a virtual environment
-
-From the repository directory:
-
-cd app
+From the repository's "app" directory:
 
 python3 -m venv .venv
 source .venv/bin/activate
@@ -275,25 +303,26 @@ source .venv/bin/activate
 python -m pip install --upgrade pip
 pip install -r req_android.txt
 
-Use a Python version supported by the project's Buildozer configuration and its pinned dependencies. Do not assume the desktop requirements and Android requirements are interchangeable.
+Use a Python version compatible with the project's Android build configuration.
 
 3. Build the APK
 
 buildozer android debug
 
-The resulting APK is normally generated in the "bin/" directory.
+The generated APK is normally placed in the "bin/" directory.
 
-Android validation checklist
+Android Validation Checklist
 
-Before distributing the APK, verify:
+Before distributing a build, verify:
 
-- Camera permissions are requested appropriately.
-- Camera initialization and release work correctly.
-- Both ONNX models load successfully.
-- Inference works on the target Android architecture.
-- Large model files do not cause unacceptable memory pressure.
-- Protected files cannot be accessed by bypassing the recognition screen.
-- The application remains functional without network connectivity.
+- Camera permissions and initialization.
+- Model loading on the target architecture.
+- ONNX Runtime compatibility.
+- Memory consumption during inference.
+- Recognition performance on the target device.
+- Protected-resource authorization.
+- Offline functionality.
+- Secure handling of enrolled identities.
 
 ---
 
@@ -301,98 +330,97 @@ Building Desktop Applications
 
 Face AI can be packaged for supported desktop operating systems using PyInstaller.
 
-Install PyInstaller:
+1. Install PyInstaller
 
 pip install pyinstaller
 
-If a project specification file already exists, use it:
+2. Build Using the Existing Specification
+
+If the project contains "dlDesktop.spec":
 
 pyinstaller dlDesktop.spec
 
-Otherwise, a basic initial build can be generated with:
+3. Alternative Basic Build
+
+If no specification file exists:
 
 pyinstaller --name FaceAI --windowed --onefile main.py
 
-The basic command is only a starting point. Applications using ONNX models, camera libraries, application assets, and native runtime dependencies may require additional packaging configuration.
+The basic command may require additional configuration for ONNX models, application assets, OpenCV, and native libraries.
 
-Packaging considerations
+Packaging Requirements
 
-Ensure the final distribution includes:
+Confirm that the packaged application includes:
 
-- Required ONNX model files.
-- Application images and other resources.
-- Native libraries required by OpenCV and ONNX Runtime.
-- Correct resource paths for packaged execution.
-- Platform-specific permissions and entitlements.
-- Required runtime configuration.
+- Required model files.
+- Application assets.
+- Compatible ONNX Runtime libraries.
+- Correct resource paths.
+- Platform-specific permissions.
+- Necessary runtime dependencies.
 
-Build and test the application on each target operating system. A build produced for one operating system is not automatically executable on another.
+Build and test on each target operating system. Desktop packages are generally platform-specific.
 
 ---
 
 Security and Privacy
 
-Face AI is designed around local processing, but the overall security of a deployment depends on its implementation and configuration.
+Face AI is developed with an emphasis on local processing and privacy-conscious application design.
 
-Recommended security controls
+Actual security depends on the implementation, configuration, and operating system.
 
-Facial data protection
+Facial Data Protection
 
-- Store facial embeddings securely.
-- Restrict access to enrolled identities.
-- Avoid unnecessary retention of raw facial images.
-- Protect enrollment and identity-management operations.
+- Protect stored facial embeddings.
+- Restrict identity enrollment and management.
+- Avoid retaining raw facial images unnecessarily.
+- Limit access to biometric information.
+- Define appropriate retention and deletion procedures.
 
-File protection
+File Encryption
 
 - Encrypt sensitive files at rest.
 - Use established cryptographic libraries.
-- Manage encryption keys separately from recognition results.
-- Avoid embedding encryption keys in source code or application binaries.
-- Implement secure recovery procedures.
+- Separate encryption keys from recognition results.
+- Never hardcode encryption keys in source code.
+- Provide a secure recovery mechanism.
+- Ensure protected files remain inaccessible after authentication expires.
 
-Authentication
+Authentication and Access Control
 
-- Apply configurable recognition thresholds.
-- Use liveness detection when required by the threat model.
-- Add rate limiting and protections against repeated attempts.
-- Consider a second authentication factor for high-risk operations.
-- Avoid treating a simple face match as proof of identity.
+- Configure appropriate recognition thresholds.
+- Consider liveness detection.
+- Implement protections against repeated failed attempts.
+- Use additional authentication for high-risk operations.
+- Keep authorization checks outside the UI layer.
+- Test attempts to bypass the authentication interface.
 
-Platform security
+Offline Security
 
-- Apply platform-specific secure-storage mechanisms.
-- Request only necessary permissions.
-- Protect sensitive logs and configuration.
-- Validate authorization independently of UI visibility.
-- Test application behavior under offline conditions.
+Offline inference can reduce exposure to external services, but it does not automatically guarantee application security.
 
-Privacy statement
-
-The intended offline architecture allows supported facial processing to occur on the device without transmitting images to a remote inference service.
-
-However, this does not automatically establish that every component is network-independent or that all stored information is encrypted. Those properties must be verified against the actual implementation.
+Validate network independence, encrypted storage, key management, and access-control behavior independently.
 
 ---
 
 Troubleshooting
 
-Problem| Suggested action
-Application does not start| Verify Python and dependency compatibility.
-Camera cannot open| Check operating-system permissions and camera availability.
-Model file not found| Verify model paths and packaged resources.
-ONNX Runtime fails to initialize| Check runtime installation, model compatibility, and target architecture.
-Face is detected but not recognized| Verify preprocessing, alignment, embedding normalization, and recognition thresholds.
-Android build fails| Check Buildozer configuration and supported Python and native dependencies.
-Packaged desktop application fails| Inspect missing resources and native-library dependencies.
-Recognition fails offline| Confirm that model files and runtime components are installed locally.
-Protected files remain accessible after logout| Audit session handling, key release, and file-access authorization.
+Problem| Recommended action
+Application fails to start| Check Python and dependency versions.
+Camera cannot open| Verify permissions and camera availability.
+Model file is missing| Confirm the expected model path.
+ONNX Runtime fails| Check runtime compatibility and native dependencies.
+Face is detected but not recognized| Check preprocessing, alignment, and recognition thresholds.
+Android build fails| Review Buildozer configuration and dependency compatibility.
+Packaged application fails| Inspect missing assets and native libraries.
+Recognition fails offline| Confirm that required models and runtime components are installed locally.
+Protected files remain accessible after logout| Review session management, encryption-key release, and authorization checks.
 
 ---
 
 Project Structure
 
-The following is an illustrative structure. Adapt it to match the actual repository layout.
+The repository structure may vary depending on the current implementation.
 
 face-ai/
 ├── app/
@@ -408,98 +436,91 @@ face-ai/
 ├── README.md
 └── ...
 
-For maintainability, consider separating the application into distinct modules as the project grows:
-
-app/
-├── main.py
-├── core/
-│   ├── face_detection.py
-│   ├── face_recognition.py
-│   └── model_runtime.py
-├── security/
-│   ├── access_control.py
-│   └── vault.py
-├── services/
-│   └── identity_service.py
-├── ui/
-├── data/
-└── ...
-
-This modular structure is a recommendation, not a claim about the current implementation.
+As development progresses, the application can be organized into dedicated modules for recognition, model management, identity management, and access control.
 
 ---
 
 Roadmap
 
-Potential areas for future development include:
+Potential development priorities:
 
-- [ ] Improve face enrollment and identity management.
-- [ ] Strengthen encrypted vault and key-management workflows.
+- [ ] Improve facial enrollment and identity management.
+- [ ] Strengthen encrypted file storage.
+- [ ] Improve encryption-key management.
 - [ ] Add configurable access-control policies.
-- [ ] Improve model loading and inference performance.
-- [ ] Expand automated tests across supported platforms.
-- [ ] Validate offline operation through network-isolation tests.
-- [ ] Improve accessibility and application usability.
-- [ ] Evaluate liveness detection and presentation-attack resistance.
+- [ ] Optimize model loading and inference.
+- [ ] Expand automated tests.
+- [ ] Validate offline operation across supported platforms.
+- [ ] Improve desktop and mobile usability.
+- [ ] Evaluate liveness detection and spoofing resistance.
 - [ ] Document model provenance and licensing.
-- [ ] Automate desktop and Android build validation.
+- [ ] Automate build and release validation.
 
 ---
 
 Contributing
 
-Contributions are welcome.
+Contributions to Face AI are welcome.
 
-To propose a change:
+To contribute:
 
 1. Fork the repository.
 2. Create a feature branch.
-3. Implement the change and add relevant tests.
-4. Verify that existing functionality remains intact.
-5. Submit a pull request describing the change.
+3. Implement your changes.
+4. Add or update relevant tests.
+5. Verify that existing functionality continues to work.
+6. Submit a pull request describing your changes.
 
-Please avoid committing private facial images, enrollment databases, credentials, encryption keys, or other sensitive user data.
+Please do not commit private facial images, biometric databases, credentials, encryption keys, or other sensitive information.
+
+For project discussions and development updates, visit "Ladwong Developers" (https://www.ladwongdevelopers.dev).
 
 ---
 
-Support the Project
+About the Developer
 
-If you find Face AI useful, consider supporting its continued development.
+Face AI is developed by Kintu Alex Ladwong under Ladwong Developers.
 
-You can contribute through code, testing, documentation, issue reports, and community feedback.
+Ladwong Developers focuses on software engineering, web development, cybersecurity, and practical technology solutions.
 
-Sponsor the developer:
-
-<p align="center">
-  <a href="https://www.paypal.com/paypalme/soomnathsdas">
-    <img src="./docs/images/donate.svg" height="40" alt="Support Face AI development" />
-  </a>
-</p>---
-
-Demo
-
-Watch the application demonstration:
+The Face AI project explores how computer vision and on-device artificial intelligence can support privacy-conscious applications and secure access-control workflows.
 
 <p align="center">
-  <a href="https://www.youtube.com/watch?v=GezJh-6yIKg">
-    <img src="./docs/images/gitThumb.jpg" alt="Watch the Face AI demonstration" width="80%" />
-  </a>
-</p><p align="center">
-  <a href="https://www.youtube.com/watch?v=GezJh-6yIKg">Watch the video demonstration</a>
+  <a href="https://github.com/alexladwong">GitHub Profile</a> ·
+  <a href="https://www.ladwongdevelopers.dev">Official Website</a> ·
+  <a href="https://www.ladwongdevelopers.dev/projects">Projects</a> ·
+  <a href="https://www.linkedin.com/in/ap-kintu-alex-ladwong-omega1984/">LinkedIn</a>
 </p>---
+
+Demo and Community
+
+Follow development and technology content through the official channels:
+
+- GitHub: "github.com/alexladwong" (https://github.com/alexladwong)
+- Website: "ladwongdevelopers.dev" (https://www.ladwongdevelopers.dev)
+- Projects: "Ladwong Developers Projects" (https://www.ladwongdevelopers.dev/projects)
+- YouTube: "MilkyWay YouTube Channel" (https://www.youtube.com/@MilkyWay-y2k25)
+- LinkedIn: "Kintu Alex Ladwong" (https://www.linkedin.com/in/ap-kintu-alex-ladwong-omega1984/)
+
+A dedicated Face AI demonstration and project-specific release links can be added when published.
+
+---
 
 License
 
-Review the repository's existing license before using, modifying, or distributing the application.
+See the license file in the repository for the terms governing the application's source code.
 
-Third-party models and dependencies may have separate licensing conditions.
+Third-party libraries and AI models may have separate licensing requirements.
 
 ---
 
 <p align="center">
   <strong>Face AI</strong>
   <br />
-  Private by design. Intelligent by nature.
+  <em>Private by Design. Intelligent by Nature.</em>
   <br /><br />
-  Built with Python, computer vision, and on-device AI.
+  An AI and cybersecurity project by
+  <a href="https://www.ladwongdevelopers.dev">Ladwong Developers</a>.
+  <br /><br />
+  © Kintu Alex Ladwong. All rights reserved where applicable.
 </p>
